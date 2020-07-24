@@ -1,3 +1,5 @@
+//! An emulation of the Chip-8 programming langauge
+
 #[derive(Debug)]
 struct CPU {
     pub counter: u32,
@@ -33,8 +35,10 @@ impl Memory {
         mem
     }
 
+    /// Initializes the display area of the memory (0x0100-0x01FF).
+    ///
+    /// The display area contains the sprites for HEX digits 0-F in 5 byte chunks.
     fn initialize_display_memory(&mut self) {
-        // 0
         self.memory[0x0100] = 0b11110000;
         self.memory[0x0101] = 0b10010000;
         self.memory[0x0102] = 0b10010000;
