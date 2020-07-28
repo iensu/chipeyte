@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Registers {
+    pub i: u16,  // Stores memory addresses, only lowest 12 bits used.
     pub pc: u16, // program counter
     pub sp: u8,  // Stack pointer
     pub v0: u8,
@@ -18,6 +19,8 @@ pub struct Registers {
     pub vd: u8,
     pub ve: u8,
     pub vf: u8, // Not used by any program, used as flag by instructions.
+    pub dt: u8, // Delay Timer
+    pub st: u8, // Sound Timer
 }
 
 impl Registers {
@@ -38,6 +41,7 @@ mod tests {
         assert_eq!(
             Registers::new(666),
             Registers {
+                i: 0,
                 pc: 666,
                 sp: 0,
                 v0: 0,
@@ -56,6 +60,8 @@ mod tests {
                 vd: 0,
                 ve: 0,
                 vf: 0,
+                dt: 0,
+                st: 0,
             }
         )
     }

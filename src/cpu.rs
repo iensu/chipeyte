@@ -1,4 +1,4 @@
-use crate::cpu::instruction_decoder::{decode, Operation};
+use crate::cpu::instruction_decoder::{decode, Ops};
 use crate::cpu::registers::Registers;
 use crate::memory::Memory;
 
@@ -26,7 +26,7 @@ impl CPU {
         memory.get_u16(self.registers.pc.into())
     }
 
-    fn execute(&self, _operation: Operation, _memory: &mut Memory) {
+    fn execute(&self, _operation: Ops, _memory: &mut Memory) {
         todo!();
     }
 }
