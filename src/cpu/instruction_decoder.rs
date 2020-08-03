@@ -1,6 +1,6 @@
 type V = u8;
-type Addr = u16;
-type Nibble = u8;
+type Addr = u16; // lowest 12 bits
+type Nibble = u8; // lowest 4 bits
 type Byte = u8;
 
 #[derive(Debug, PartialEq)]

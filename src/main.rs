@@ -4,10 +4,12 @@ use cpu::CPU;
 use memory::Memory;
 
 fn main() {
-    let cpu = CPU::new(1024, 0x0200);
+    let mut cpu = CPU::new(1024, 0x0200);
     let mut memory = Memory::new();
 
-    cpu.tick(&mut memory);
+    if let Err(e) = cpu.tick(&mut memory) {
+        println!("Something went wrong: {:?}", e);
+    };
 }
 
 mod cpu;

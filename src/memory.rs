@@ -18,7 +18,7 @@
 ///
 /// The stack is an array of 16 16-bit values, used to store the address that the interpreter should
 /// return to when finished with a subroutine. Chip-8 allows for up to 16 levels of nested subroutines.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Memory {
     memory: Vec<u8>,
 }
