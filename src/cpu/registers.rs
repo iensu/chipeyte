@@ -79,6 +79,27 @@ impl Registers {
         }
     }
 
+    pub fn get_numeric_register(&self, register: NumericRegister) -> u8 {
+        match register {
+            NumericRegister::V0 => self.v0,
+            NumericRegister::V1 => self.v1,
+            NumericRegister::V2 => self.v2,
+            NumericRegister::V3 => self.v3,
+            NumericRegister::V4 => self.v4,
+            NumericRegister::V5 => self.v5,
+            NumericRegister::V6 => self.v6,
+            NumericRegister::V7 => self.v7,
+            NumericRegister::V8 => self.v8,
+            NumericRegister::V9 => self.v9,
+            NumericRegister::VA => self.va,
+            NumericRegister::VB => self.vb,
+            NumericRegister::VC => self.vc,
+            NumericRegister::VD => self.vd,
+            NumericRegister::VE => self.ve,
+            NumericRegister::VF => self.vf,
+        }
+    }
+
     pub fn set_numeric_register(&mut self, register: NumericRegister, value: u8) {
         match register {
             NumericRegister::V0 => {
