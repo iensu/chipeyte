@@ -176,7 +176,7 @@ impl Display for Memory {
             .collect::<Vec<String>>()
             .chunks(columns)
             .enumerate()
-            .map(|(idx, bytes)| format!("{:03x?} | {}", idx, bytes.join(" ")))
+            .map(|(idx, bytes)| format!("{:03x?} | {} |", idx, bytes.join(" ").replace("00", "--")))
             .collect::<Vec<String>>()
             .join("\n");
 
@@ -184,8 +184,9 @@ impl Display for Memory {
             f,
             "
        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-    ,------------------------------------------------
-{}",
+    ,-------------------------------------------------,
+{}
+    `-------------------------------------------------´",
             bytes_string
         )
     }

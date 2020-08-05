@@ -79,7 +79,7 @@ impl Registers {
         }
     }
 
-    pub fn get_numeric_register(&self, register: NumericRegister) -> u8 {
+    pub fn get_numeric_register(&self, register: &NumericRegister) -> u8 {
         match register {
             NumericRegister::V0 => self.v0,
             NumericRegister::V1 => self.v1,
@@ -100,7 +100,7 @@ impl Registers {
         }
     }
 
-    pub fn set_numeric_register(&mut self, register: NumericRegister, value: u8) {
+    pub fn set_numeric_register(&mut self, register: &NumericRegister, value: u8) {
         match register {
             NumericRegister::V0 => {
                 self.v0 = value;
