@@ -30,6 +30,8 @@ fn main() {
             println!("Something went wrong: {:?}", e);
         };
     });
+
+    log::debug!("{}", cpu);
 }
 
 mod cpu;
