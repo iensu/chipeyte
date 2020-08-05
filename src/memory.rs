@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 const PROGRAM_START: usize = 0x0200;
 
 /// # Chip-8 Memory Map
@@ -28,7 +30,7 @@ pub struct Memory {
 impl Memory {
     pub fn new() -> Memory {
         let mut mem = Memory {
-            memory: vec![0; 4095],
+            memory: vec![0; 4096],
         };
         mem.initialize_display_memory();
         mem
@@ -161,6 +163,31 @@ impl Memory {
 
         self.set(index, x);
         self.set(index + 1, y);
+    }
+}
+
+impl Display for Memory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let columns = 16;
+        let bytes_string: String = self
+            .memory
+            .iter()
+            .map(|x| format!("{:02x?}", x))
+            .collect::<Vec<String>>()
+            .chunks(columns)
+            .enumerate()
+            .map(|(idx, bytes)| format!("{:03x?} | {}", idx, bytes.join(" ")))
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        write!(
+            f,
+            "
+       0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+    ,------------------------------------------------
+{}",
+            bytes_string
+        )
     }
 }
 

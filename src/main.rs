@@ -27,7 +27,8 @@ fn main() {
         };
     });
 
-    log::debug!("{}", cpu);
+    log::debug!("{}", memory);
+    log::debug!("\n{}", cpu);
 }
 
 mod cpu;
