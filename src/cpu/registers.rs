@@ -1,4 +1,4 @@
-use crate::cpu::error::CPUError;
+use crate::ChipeyteError;
 
 #[derive(Debug)]
 pub enum NumericRegister {
@@ -21,9 +21,9 @@ pub enum NumericRegister {
 }
 
 impl std::convert::TryFrom<u8> for NumericRegister {
-    type Error = CPUError;
+    type Error = ChipeyteError;
 
-    fn try_from(register: u8) -> Result<Self, CPUError> {
+    fn try_from(register: u8) -> Result<Self, ChipeyteError> {
         match register {
             0x0 => Ok(NumericRegister::V0),
             0x1 => Ok(NumericRegister::V1),
@@ -41,7 +41,7 @@ impl std::convert::TryFrom<u8> for NumericRegister {
             0xD => Ok(NumericRegister::VD),
             0xE => Ok(NumericRegister::VE),
             0xF => Ok(NumericRegister::VF),
-            _ => Err(CPUError::BadNumericRegister(register)),
+            _ => Err(ChipeyteError::BadNumericRegister(register)),
         }
     }
 }

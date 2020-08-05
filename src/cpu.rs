@@ -1,7 +1,10 @@
-use crate::cpu::error::CPUError;
-use crate::cpu::instruction_decoder::{decode, Ops};
+pub mod instruction_decoder;
+pub mod registers;
+
+use crate::cpu::instruction_decoder::decode;
 use crate::cpu::registers::{NumericRegister, Registers};
 use crate::memory::Memory;
+use crate::{ChipeyteError, Ops};
 use std::convert::TryFrom;
 use std::fmt::Display;
 
@@ -21,7 +24,7 @@ impl CPU {
         }
     }
 
-    pub fn tick(&mut self, memory: &mut Memory) -> Result<(), CPUError> {
+    pub fn tick(&mut self, memory: &mut Memory) -> Result<(), ChipeyteError> {
         let instruction = self.fetch(memory);
         let operation = decode(instruction);
 
@@ -40,7 +43,7 @@ impl CPU {
         memory.get_u16(self.registers.pc.into())
     }
 
-    fn execute(&mut self, operation: Ops, memory: &mut Memory) -> Result<(), CPUError> {
+    fn execute(&mut self, operation: Ops, memory: &mut Memory) -> Result<(), ChipeyteError> {
         match operation {
             Ops::SYS(_) => Ok(()),
 
@@ -101,7 +104,7 @@ impl CPU {
                 Ok(())
             }
 
-            _ => Err(CPUError::OpNotImplemented(operation)),
+            _ => Err(ChipeyteError::OpNotImplemented(operation)),
         }
     }
 }
@@ -141,10 +144,6 @@ VC: {:02x?} VD: {:02x?} VE: {:02x?} VF: {:02x?}",
         )
     }
 }
-
-mod error;
-pub mod instruction_decoder;
-mod registers;
 
 #[cfg(test)]
 mod tests {
