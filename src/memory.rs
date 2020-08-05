@@ -142,8 +142,8 @@ impl Memory {
     }
 
     pub fn get_u16(&self, index: usize) -> u16 {
-        let x = self.memory[index];
-        let y = self.memory[index + 1];
+        let x = self.get(index);
+        let y = self.get(index + 1);
 
         u16::from_be_bytes([x, y])
     }
@@ -151,8 +151,8 @@ impl Memory {
     pub fn set_u16(&mut self, index: usize, value: u16) {
         let [x, y] = value.to_be_bytes();
 
-        self.memory[index] = x;
-        self.memory[index + 1] = y;
+        self.set(index, x);
+        self.set(index + 1, y);
     }
 }
 
