@@ -1,7 +1,18 @@
 //! An emulation of the Chip-8 programming langauge
 
+mod cpu;
+mod errors;
+mod memory;
+mod operations;
+mod program_reader;
+mod types;
+
+pub use cpu::registers::Registers;
+pub use errors::ChipeyteError;
+pub use memory::Memory;
+pub use operations::Ops;
+
 use cpu::CPU;
-use memory::Memory;
 use std::env;
 use std::path::Path;
 
@@ -30,7 +41,3 @@ fn main() {
     log::debug!("{}", memory);
     log::debug!("\n{}", cpu);
 }
-
-mod cpu;
-mod memory;
-mod program_reader;
