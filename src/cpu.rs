@@ -24,6 +24,13 @@ impl CPU {
         let instruction = self.fetch(memory);
         let operation = decode(instruction);
 
+        log::info!(
+            "{:04x?}: {:x?} - {:?}",
+            self.registers.pc,
+            instruction,
+            operation
+        );
+
         self.registers.pc += INSTRUCTION_LENGTH;
         self.execute(operation, memory)
     }
