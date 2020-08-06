@@ -121,19 +121,110 @@ impl Callable for Ops {
                 let register = NumericRegister::try_from(*v)?;
 
                 let value = registers.get_numeric_register(&register);
-                let result = (u8::MAX as u16).min(*byte as u16 + value as u16);
-                registers.set_numeric_register(&register, result as u8);
+                let result = byte.wrapping_add(value);
+
+                registers.set_numeric_register(&register, result);
                 Ok(())
             }
 
-            Ops::LDV(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::OR(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::AND(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::XOR(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::ADDV(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::SUB(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::LDV(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                registers.set_numeric_register(&reg_x, registers.get_numeric_register(&reg_y));
+                Ok(())
+            }
+
+            Ops::OR(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                registers.set_numeric_register(&reg_x, x | y);
+                Ok(())
+            }
+
+            Ops::AND(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                registers.set_numeric_register(&reg_x, x & y);
+                Ok(())
+            }
+
+            Ops::XOR(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                registers.set_numeric_register(&reg_x, x ^ y);
+                Ok(())
+            }
+
+            Ops::ADDV(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+                let value = x as u16 + y as u16;
+
+                registers.set_numeric_register(&reg_x, value as u8);
+
+                if value > u8::MAX.into() {
+                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                } else {
+                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                }
+
+                Ok(())
+            }
+
+            Ops::SUB(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                registers.set_numeric_register(&reg_x, x.wrapping_sub(y));
+
+                if x > y {
+                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                } else {
+                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                }
+
+                Ok(())
+            }
+
             Ops::SHR(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::SUBN(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+
+            Ops::SUBN(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                registers.set_numeric_register(&reg_x, y.wrapping_sub(x));
+
+                if y > x {
+                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                } else {
+                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                }
+
+                Ok(())
+            }
+
             Ops::SHL(_) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::SNEV(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::LDI(_) => Err(ChipeyteError::OpNotImplemented(*self)),
@@ -352,7 +443,160 @@ mod tests {
             .call(&mut registers, &mut memory)
             .expect("Failed to add to register");
 
-        assert_eq!(registers.v0, u8::MAX);
+        assert_eq!(registers.v0, 144);
         assert_eq!(registers.vf, 0); // CARRY FLAG
+    }
+
+    #[test]
+    fn op_ld_vxvy_stores_vx_in_vy() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0b, 0x09)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+        Ops::LDV(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 9);
+    }
+
+    #[test]
+    fn op_or_vx_vy_stores_bitwise_or_in_vx() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 0b1001_0111)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+        Ops::LD(0x0b, 0b0110_1001)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        Ops::OR(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 0b1111_1111);
+    }
+
+    #[test]
+    fn op_and_vx_vy_stores_bitwise_and_in_vx() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 0b1001_0111)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+        Ops::LD(0x0b, 0b0110_1001)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        Ops::AND(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 0b0000_0001);
+    }
+
+    #[test]
+    fn op_xor_vx_vy_stores_bitwise_xor_in_vx() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 0b1001_0111)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+        Ops::LD(0x0b, 0b0110_1001)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        Ops::XOR(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 0b1111_1110);
+    }
+
+    #[test]
+    fn op_add_vx_vy_adds_vy_to_vx_and_sets_carry() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 0b1111_1111)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+        Ops::LD(0x0b, 0b111_0000)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        Ops::ADDV(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 0b0110_1111);
+        assert_eq!(registers.vf, 1);
+
+        Ops::LD(0x0c, 0b0000_0011)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        Ops::ADDV(0x0b, 0x0c)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.vb, 0b0111_0011);
+        assert_eq!(registers.vf, 0);
+    }
+
+    #[test]
+    fn op_sub_vx_vy_subtract_vy_from_vx_and_set_not_borrow() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 7).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0b, 3).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0c, 5).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0d, 9).call(&mut registers, &mut memory).unwrap();
+
+        Ops::SUB(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 4); // 7 - 3 = 4
+        assert_eq!(registers.vf, 1);
+
+        Ops::SUB(0x0c, 0x0d)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.vc, 252); // 5 - 9 [(252 + 9) % 256 = 5]  256 = u8::MAX + 1
+        assert_eq!(registers.vf, 0);
+    }
+
+    #[test]
+    fn op_subn_vx_vy_subtract_vx_from_vy_and_set_not_borrow() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x0a, 7).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0b, 10).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0c, 12).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0d, 9).call(&mut registers, &mut memory).unwrap();
+
+        Ops::SUBN(0x0a, 0x0b)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.va, 3); // 10 - 7 = 3
+        assert_eq!(registers.vf, 1);
+
+        Ops::SUBN(0x0c, 0x0d)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        assert_eq!(registers.vc, 253); // 9 - 12 = [(253 + 12) % 256 = 9]
+        assert_eq!(registers.vf, 0);
     }
 }
