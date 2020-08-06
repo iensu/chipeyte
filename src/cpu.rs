@@ -82,3 +82,35 @@ VC: {:02x?} VD: {:02x?} VE: {:02x?} VF: {:02x?}",
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PROGRAM_START: u16 = 0x0200;
+    const INSTRUCTION_LENGTH: u16 = 0x0002;
+
+    #[test]
+    fn cpu_increments_pc_during_tick() {
+        let mut memory = Memory::new();
+        let mut cpu = CPU::new(0, PROGRAM_START);
+
+        let program = vec![0x0aaa, 0x0aaa, 0x0aaa];
+
+        memory.load_program(&program);
+
+        assert_eq!(cpu.registers.pc, PROGRAM_START);
+
+        cpu.tick(&mut memory).unwrap();
+
+        assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
+
+        cpu.tick(&mut memory).unwrap();
+
+        assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 2);
+
+        cpu.tick(&mut memory).unwrap();
+
+        assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 3);
+    }
+}
