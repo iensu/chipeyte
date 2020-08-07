@@ -67,14 +67,32 @@ impl Callable for Ops {
             }
 
             Ops::JP(addr) => {
-                registers.pc = *addr;
+                let address = *addr;
+
+                if address > 0x0fff {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!("Memory address '{:04x?}' is out-of-bounds", address),
+                    ));
+                }
+
+                registers.pc = address;
                 Ok(())
             }
 
             Ops::CALL(addr) => {
+                let address = *addr;
+
+                if address > 0x0fff {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!("Memory address '{:04x?}' is out-of-bounds", address),
+                    ));
+                }
+
                 registers.sp += STACK_ENTRY_LENGTH;
                 memory.set_u16(registers.sp.into(), registers.pc);
-                registers.pc = *addr;
+                registers.pc = address;
                 Ok(())
             }
 
@@ -247,6 +265,7 @@ impl Callable for Ops {
                 registers.set_numeric_register(&reg_x, x << 1);
                 Ok(())
             }
+
             Ops::SNEV(vx, vy) => {
                 let reg_x = NumericRegister::try_from(*vx).unwrap();
                 let reg_y = NumericRegister::try_from(*vy).unwrap();
@@ -323,6 +342,22 @@ mod tests {
     }
 
     #[test]
+    fn op_jp_must_be_within_memory_bounds() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        if let Err(ChipeyteError::OpFailed(op, msg)) =
+            Ops::JP(0xf000).call(&mut registers, &mut memory)
+        {
+            assert_eq!(op, Ops::JP(0xf000));
+            assert!(msg.contains("out-of-bounds"));
+            return;
+        }
+
+        panic!("Test failed!");
+    }
+
+    #[test]
     fn op_call_calls_addr() {
         let mut memory = Memory::new();
         let mut registers = Registers::new(PROGRAM_START);
@@ -332,6 +367,22 @@ mod tests {
         assert_eq!(registers.pc, 0x0aaa);
         assert_eq!(registers.sp, 0x0002);
         assert_eq!(memory.get_u16(0x0002), 0x0200);
+    }
+
+    #[test]
+    fn op_call_addr_must_be_within_memory_bounds() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        if let Err(ChipeyteError::OpFailed(op, msg)) =
+            Ops::CALL(0xf000).call(&mut registers, &mut memory)
+        {
+            assert_eq!(op, Ops::CALL(0xf000));
+            assert!(msg.contains("out-of-bounds"));
+            return;
+        }
+
+        panic!("Test failed!");
     }
 
     #[test]
