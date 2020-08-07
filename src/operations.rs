@@ -278,7 +278,21 @@ impl Callable for Ops {
                 }
                 Ok(())
             }
-            Ops::LDI(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+
+            Ops::LDI(addr) => {
+                let address = *addr;
+
+                if address > 0x0fff {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!("Memory address '{:04x?}' is out-of-bounds", address),
+                    ));
+                }
+
+                registers.i = address & 0x0fff;
+                Ok(())
+            }
+
             Ops::JPV0(_) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::RND(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::DRW(_, _, _) => Err(ChipeyteError::OpNotImplemented(*self)),
@@ -772,5 +786,34 @@ mod tests {
         });
 
         assert_eq!(registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
+    }
+
+    #[test]
+    fn op_ldi_sets_i_register() {
+        let ops = vec![Ops::LDI(0x0012)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.i, 0x0012);
+    }
+
+    #[test]
+    fn op_ldi_addr_must_be_within_memory_bounds() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        if let Err(ChipeyteError::OpFailed(op, msg)) =
+            Ops::LDI(0xf000).call(&mut registers, &mut memory)
+        {
+            assert_eq!(op, Ops::LDI(0xf000));
+            assert!(msg.contains("out-of-bounds"));
+            return;
+        }
+
+        panic!("Test failed!");
     }
 }
