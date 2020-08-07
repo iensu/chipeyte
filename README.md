@@ -33,7 +33,7 @@ The fundamental operation of most CPUs is to execute a sequence of stored instru
 ### Operations
 
 | Code | Operation          | Description                                                                                                                    |
-+------+--------------------+--------------------------------------------------------------------------------------------------------------------------------|
+| ---- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | 0nnn | SYS addr           | Ignored                                                                                                                        |
 | 00E0 | CLS                | Clear display                                                                                                                  |
 | 00EE | RET                | Return from subroutine                                                                                                         |
@@ -43,7 +43,7 @@ The fundamental operation of most CPUs is to execute a sequence of stored instru
 | 4xkk | SNE Vx, byte       | Skip next instruction if Vx != byte                                                                                            |
 | 5xy0 | SE Vx, Vy          | Skip next instruction if Vx == Vy                                                                                              |
 | 6xkk | LD Vx, byte        | Store byte in Vx                                                                                                               |
-| 7xkk | ADD Vx, byte       | Add byte to Vx *without* setting carry                                                                                         |
+| 7xkk | ADD Vx, byte       | Add byte to Vx **without** setting carry                                                                                       |
 | 8xy0 | LD Vx, Vy          | Store value of Vy in Vx                                                                                                        |
 | 8xy1 | OR Vx, Vy          | Bitwise OR on the values of Vx and Vy, then stores the result in Vx.                                                           |
 | 8xy2 | AND Vx, Vy         | Bitwise AND on the values of Vx and Vy, then stores the result in Vx.                                                          |
@@ -68,7 +68,7 @@ The fundamental operation of most CPUs is to execute a sequence of stored instru
 | Fx29 | LD F, Vx           |                                                                                                                                |
 | Fx33 | LD B, Vx           |                                                                                                                                |
 | Fx55 | LD [I], Vx         |                                                                                                                                |
-| Fx65 | LD Vx, [I]         |                                                                                                                                |
+| Fx65 | LD Vx, [I]         |
 
 ## References
 
