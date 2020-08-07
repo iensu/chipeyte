@@ -236,8 +236,29 @@ impl Callable for Ops {
                 Ok(())
             }
 
-            Ops::SHL(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::SNEV(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::SHL(vx) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let x = registers.get_numeric_register(&reg_x);
+
+                let most_significant_bit = x & 0b1000_0000;
+
+                registers.vf = most_significant_bit;
+
+                registers.set_numeric_register(&reg_x, x << 1);
+                Ok(())
+            }
+            Ops::SNEV(vx, vy) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+                let reg_y = NumericRegister::try_from(*vy).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+                let y = registers.get_numeric_register(&reg_y);
+
+                if x != y {
+                    registers.pc += INSTRUCTION_LENGTH;
+                }
+                Ok(())
+            }
             Ops::LDI(_) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::JPV0(_) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::RND(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
@@ -643,5 +664,62 @@ mod tests {
         });
 
         assert_eq!(registers.vf, 0);
+    }
+
+    #[test]
+    fn op_shl_vx_left_shifts() {
+        let ops = vec![Ops::LD(0x0a, 0b0111_1111), Ops::SHL(0x0a)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.va, 0b1111_1110);
+    }
+
+    #[test]
+    fn op_op_shl_stores_most_significant_bit_in_vf() {
+        let ops = vec![Ops::LD(0x0a, 0b1111_0000), Ops::SHL(0x0a)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.vf, 0b1000_0000);
+
+        let ops = vec![Ops::LD(0x0a, 0b0111_0000), Ops::SHL(0x0a)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.vf, 0);
+    }
+
+    #[test]
+    fn op_snev_increments_pc_if_vx_not_equals_vy() {
+        let ops = vec![Ops::LD(0x0a, 42), Ops::LD(0x0b, 42), Ops::SNEV(0x0a, 0x0b)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.pc, PROGRAM_START);
+
+        let ops = vec![Ops::LD(0x0a, 42), Ops::LD(0x0b, 24), Ops::SNEV(0x0a, 0x0b)];
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
     }
 }
