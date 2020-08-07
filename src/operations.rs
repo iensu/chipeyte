@@ -205,7 +205,18 @@ impl Callable for Ops {
                 Ok(())
             }
 
-            Ops::SHR(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::SHR(vx) => {
+                let reg_x = NumericRegister::try_from(*vx).unwrap();
+
+                let x = registers.get_numeric_register(&reg_x);
+
+                let least_significant_bit = x & 0b0000_0001;
+
+                registers.vf = least_significant_bit;
+
+                registers.set_numeric_register(&reg_x, x >> 1);
+                Ok(())
+            }
 
             Ops::SUBN(vx, vy) => {
                 let reg_x = NumericRegister::try_from(*vx).unwrap();
@@ -597,6 +608,40 @@ mod tests {
             .unwrap();
 
         assert_eq!(registers.vc, 253); // 9 - 12 = [(253 + 12) % 256 = 9]
+        assert_eq!(registers.vf, 0);
+    }
+
+    #[test]
+    fn op_shr_vx_right_shifts() {
+        let ops = vec![Ops::LD(0x0a, 0b1111_1111), Ops::SHR(0x0a)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.va, 0b0111_1111);
+    }
+
+    #[test]
+    fn op_shr_vx_stores_least_significant_bit_in_vf() {
+        let instructions = vec![Ops::LD(0x0a, 0b1111_1111), Ops::SHR(0x0a)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        instructions.iter().for_each(|instruction| {
+            (*instruction).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.vf, 1);
+
+        let instructions = vec![Ops::LD(0x0a, 0b0000_1110), Ops::SHR(0x0a)];
+
+        instructions.iter().for_each(|instruction| {
+            (*instruction).call(&mut registers, &mut memory).unwrap();
+        });
+
         assert_eq!(registers.vf, 0);
     }
 }
