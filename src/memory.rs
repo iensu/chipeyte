@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-const PROGRAM_START: usize = 0x0200;
-
 /// # Chip-8 Memory Map
 ///
 /// | Hex Range   | Decimal    | Function     |
@@ -137,9 +135,9 @@ impl Memory {
         self.memory[0x01F4] = 0b10000000;
     }
 
-    pub fn load_program(&mut self, program: &Vec<u16>) {
+    pub fn load_program(&mut self, program_start_address: usize, program: &Vec<u16>) {
         program.iter().enumerate().for_each(|(idx, op)| {
-            self.set_u16(PROGRAM_START + idx * 2, *op);
+            self.set_u16(program_start_address + idx * 2, *op);
         });
     }
 

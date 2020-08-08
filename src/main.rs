@@ -30,7 +30,7 @@ fn main() {
     let mut cpu = CPU::new(1024, 0x0200);
     let mut memory = Memory::new();
 
-    memory.load_program(&program);
+    memory.load_program(cpu::PROGRAM_START.into(), &program);
 
     (0..program.len()).for_each(|_| {
         if let Err(e) = cpu.tick(&mut memory) {

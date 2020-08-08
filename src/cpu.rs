@@ -7,7 +7,8 @@ use crate::Registers;
 use crate::{operations::Callable, ChipeyteError, Ops};
 use std::fmt::Display;
 
-const INSTRUCTION_LENGTH: u16 = 2;
+pub const PROGRAM_START: u16 = 0x0200;
+pub const INSTRUCTION_LENGTH: u16 = 2;
 
 #[derive(Debug, PartialEq)]
 pub struct CPU {
@@ -87,9 +88,6 @@ VC: {:02x?} VD: {:02x?} VE: {:02x?} VF: {:02x?}",
 mod tests {
     use super::*;
 
-    const PROGRAM_START: u16 = 0x0200;
-    const INSTRUCTION_LENGTH: u16 = 0x0002;
-
     #[test]
     fn cpu_increments_pc_during_tick() {
         let mut memory = Memory::new();
@@ -97,7 +95,7 @@ mod tests {
 
         let program = vec![0x0aaa, 0x0aaa, 0x0aaa];
 
-        memory.load_program(&program);
+        memory.load_program(PROGRAM_START.into(), &program);
 
         assert_eq!(cpu.registers.pc, PROGRAM_START);
 

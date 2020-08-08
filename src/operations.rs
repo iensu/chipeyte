@@ -1,7 +1,10 @@
-use crate::{cpu::registers::NumericRegister, types::*, ChipeyteError, Memory, Registers};
+use crate::{
+    cpu::{registers::NumericRegister, INSTRUCTION_LENGTH, PROGRAM_START},
+    types::*,
+    ChipeyteError, Memory, Registers,
+};
 use std::convert::TryFrom;
 
-const INSTRUCTION_LENGTH: u16 = 2;
 const STACK_ENTRY_LENGTH: u8 = 2;
 
 pub trait Callable {
@@ -314,9 +317,6 @@ impl Callable for Ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const PROGRAM_START: u16 = 0x0200;
-    const INSTRUCTION_LENGTH: u16 = 2;
 
     #[test]
     fn op_sys_is_ignored() {
