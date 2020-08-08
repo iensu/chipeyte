@@ -296,7 +296,31 @@ impl Callable for Ops {
                 Ok(())
             }
 
-            Ops::JPV0(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::JPV0(value) => {
+                let result = *value + registers.v0 as u16;
+
+                if result < PROGRAM_START || result > 0x0fff {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!(
+                            "Memory address '{:04x?}' is outside of program area {:04x?}-0fff",
+                            result, PROGRAM_START
+                        ),
+                    ));
+                } else if result % INSTRUCTION_LENGTH != 0 {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!(
+                            "Memory address '{:04x?}' is an invalid instruction address.",
+                            result
+                        ),
+                    ));
+                }
+
+                registers.pc = result;
+                Ok(())
+            }
+
             Ops::RND(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::DRW(_, _, _) => Err(ChipeyteError::OpNotImplemented(*self)),
             Ops::SKP(_) => Err(ChipeyteError::OpNotImplemented(*self)),
@@ -815,5 +839,69 @@ mod tests {
         }
 
         panic!("Test failed!");
+    }
+
+    #[test]
+    fn op_jpv0_jumps_to_nnn_plus_v0() {
+        let ops = vec![Ops::LD(0x00, 0x10), Ops::JPV0(0x0220)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.pc, 0x0230);
+    }
+
+    #[test]
+    fn op_jpv0_returns_error_if_resulting_address_is_out_of_bounds() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x00, 0xff)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        match Ops::JPV0(0x0fff).call(&mut registers, &mut memory) {
+            Err(ChipeyteError::OpFailed(Ops::JPV0(0x0fff), msg)) => {
+                assert!(msg.contains("outside of program area"));
+            }
+            _ => panic!("Did not return appropriate error!"),
+        }
+    }
+
+    #[test]
+    fn op_jpv0_returns_error_if_resulting_address_is_outside_of_program_area() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x00, 0xff)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        match Ops::JPV0(0x0000).call(&mut registers, &mut memory) {
+            Err(ChipeyteError::OpFailed(Ops::JPV0(0x0000), msg)) => {
+                assert!(msg.contains("outside of program area"));
+            }
+            _ => panic!("Did not return appropriate error!"),
+        }
+    }
+
+    #[test]
+    fn op_jpv0_returns_error_if_resulting_address_is_an_invalid_instruction_position() {
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        Ops::LD(0x00, 0x07)
+            .call(&mut registers, &mut memory)
+            .unwrap();
+
+        match Ops::JPV0(0x0200).call(&mut registers, &mut memory) {
+            Err(ChipeyteError::OpFailed(Ops::JPV0(0x0200), msg)) => {
+                assert!(msg.contains("invalid instruction address"));
+            }
+            _ => panic!("Did not return appropriate error!"),
+        }
     }
 }
