@@ -1,7 +1,24 @@
-6a42
-6b41
-5ab0
-7b01
-5ab0
-6a66
-6b66
+6A42
+6B41
+5AB0
+7B01
+5AB0
+6A66
+6B66
+;; Store a random value in V3
+C399
+;; Set I to 0B00
+AB00
+;; Store data registers 0-F in memory
+FF55
+;; Read data registers 0-F from memory
+FF65
+;; Set I to 0C00
+AC00
+;; Set Vc to 254
+6CFE
+;; To binary-coded decimal representation
+FC33
+650B
+;; Set I to sprite location for A
+F529
