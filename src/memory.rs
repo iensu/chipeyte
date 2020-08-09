@@ -171,7 +171,7 @@ impl Memory {
         }
 
         // Sprites are located between 0x0100-0x01F0, where bits 4-7 designate the character
-        let d = (digit & 0b0000_0001 << 4) as u16;
+        let d = (digit << 4) as u16;
 
         Ok(0x0100 + d)
     }
