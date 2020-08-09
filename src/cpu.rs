@@ -53,17 +53,20 @@ impl Display for CPU {
         write!(
             f,
             "
-Counter: {:04x?} PC: {:04x?} SP: {:04x?}
-DT: {:02x?} ST: {:02x?}
-V0: {:02x?} V1: {:02x?} V2: {:02x?} V3: {:02x?}
-V4: {:02x?} V5: {:02x?} V6: {:02x?} V7: {:02x?}
-V8: {:02x?} V9: {:02x?} VA: {:02x?} VB: {:02x?}
-VC: {:02x?} VD: {:02x?} VE: {:02x?} VF: {:02x?}",
+Counter: {:04x?}
+PC: {:04x?} SP: {:04x?} I: {:04x?}
+DT: {:02x?}   ST: {:02x?}
+
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+  ,-------------------------------------------------,
+V | {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} |
+  `-------------------------------------------------´",
             self.counter,
             self.registers.pc,
+            self.registers.sp,
+            self.registers.i,
             self.registers.dt,
             self.registers.st,
-            self.registers.sp,
             self.registers.v0,
             self.registers.v1,
             self.registers.v2,
