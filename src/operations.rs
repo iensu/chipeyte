@@ -14,40 +14,261 @@ pub trait Callable {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Ops {
     UNKNOWN(u16),
+    /// SYS `nnn`
+    ///
+    /// Op code: `0nnn`
+    ///
+    /// Ignored.
     SYS(Addr),
+
+    /// CLS
+    ///
+    /// Op code: `00E0`
+    ///
+    /// Clear display.
     CLS,
+
+    /// RET
+    ///
+    /// Op code: `00EE`
+    ///
+    /// Return from subroutine.
     RET,
+
+    /// JP `nnn`
+    ///
+    /// Op code: `1nnn`
+    ///
+    /// Jump to address `nnn`.
     JP(Addr),
+
+    /// CALL `nnn`
+    ///
+    /// Op code: `2nnn`
+    ///
+    /// Call subroutine at address `nnn`.
     CALL(Addr),
+
+    /// SE `Vx`, `nn`
+    ///
+    /// Op code: `3xnn`
+    ///
+    /// Skip next instruction if `Vx` == `nn`.
     SE(V, Byte),
-    SEV(V, V),
+
+    /// SNE `Vx`, `nn`
+    ///
+    /// Op code: `4xnn`
+    ///
+    /// Skip next instruction if `Vx` != `nn`.
     SNE(V, Byte),
+
+    /// SE `Vx`, `Vy`
+    ///
+    /// Op code: `5xy0`
+    ///
+    /// Skip next instruction if `Vx` == `Vy`.
+    SEV(V, V),
+
+    /// LD `Vx`, `nn`
+    ///
+    /// Op code: `6xnn`
+    ///
+    /// Set `Vx` to `nn`.
     LD(V, Byte),
+
+    /// ADD `Vx`, `nn`
+    ///
+    /// Op code: `7xnn`
+    ///
+    /// Add `nn` to `Vx` **without** setting carry.
     ADD(V, Byte),
+
+    /// LD `Vx`, `Vy`
+    ///
+    /// Op code: `8xy0`
+    ///
+    /// Store value of `Vy` in `Vx`.
     LDV(V, V),
+
+    /// OR `Vx`, `Vy`
+    ///
+    /// Op code: `8xy1`
+    ///
+    /// Bitwise OR on `Vx` and `Vy`, stores the result in `Vx`.
     OR(V, V),
+
+    /// AND `Vx`, `Vy`
+    ///
+    /// Op code: `8xy2`
+    ///
+    /// Bitwise AND on `Vx` and `Vy`, stores the result in `Vx`.
     AND(V, V),
+
+    /// XOR `Vx`, `Vy`
+    ///
+    /// Op code: `8xy3`
+    ///
+    /// Bitwise XOR on `Vx` and `Vy`, stores the result in `Vx`.
     XOR(V, V),
+
+    /// ADD `Vx`, `Vy`
+    ///
+    /// Op code: `8xy4`
+    ///
+    /// Set `Vx` to `Vx` + `Vy`.
     ADDV(V, V),
+
+    /// SUB `Vx`, `Vy`
+    ///
+    /// Op code: `8xy5`
+    ///
+    /// Set `Vx` to `Vx` - `Vy`, set Vf = NOT borrow.
     SUB(V, V),
+
+    /// SHR `Vx` {, `Vy`}
+    ///
+    /// Op code: `8xy6`
+    ///
+    /// Stores the least significant bit of `Vx` in Vf and then shifts `Vx` to the right by 1.
     SHR(V),
+
+    /// SUBN `Vx`, `Vy`
+    ///
+    /// Op code: `8xy7`
+    ///
+    /// Set `Vx` = `Vy` - `Vx`, set Vf = NOT borrow.
     SUBN(V, V),
+
+    /// SHL `Vx` {, `Vy`}
+    ///
+    /// Op code: `8xyE`
+    ///
+    /// Stores the most significant bit of `Vx` in Vf and then shifts `Vx` to the left by 1.
     SHL(V),
+
+    /// SNE `Vx`, `Vy`
+    ///
+    /// Op code: `9xy0`
+    ///
+    /// Skip next instruction if `Vx` != `Vy`.
     SNEV(V, V),
+
+    /// LD I, `nnn`
+    ///
+    /// Op code: `Annn`
+    ///
+    /// Set I = `nnn`.
     LDI(Addr),
+
+    /// JP V0, `nnn`
+    ///
+    /// Op code: `Bnnn`
+    ///
+    /// Jump to address `nnn` + V0.
     JPV0(Addr),
+
+    /// RND `Vx`, `nn`
+    ///
+    /// Op code: `Cxnn`
+    ///
+    /// Sets `Vx` to the result of a bitwise and operation on a random number (Typically: 0 to 255) and `nn`.
     RND(V, Byte),
+
+    /// DRW `Vx`, `Vy`, `n`
+    ///
+    /// Op code: `Dxyn`
+    ///
+    /// Draws a sprite at coordinate (`Vx`, `Vy`) that has a width of 8 pixels and a height of `n` pixels.
     DRW(V, V, Nibble),
+
+    /// SKP `Vx`
+    ///
+    /// Op code: `Ex9E`
+    ///
+    /// Skips the next instruction if the key stored in `Vx` is pressed.
     SKP(V),
+
+    /// SKNP `Vx`
+    ///
+    /// Op code: `ExA1`
+    ///
+    /// Skips the next instruction if the key stored in `Vx` isn't pressed.
     SKNP(V),
+
+    /// LD `Vx`, DT
+    ///
+    /// Op code: `Fx07`
+    ///
+    /// Sets `Vx` to the value of the delay timer.
     LDVDT(V),
+
+    /// LD `Vx` {, `k`}
+    ///
+    /// Op code: `Fx0A`
+    ///
+    /// A key press is awaited, and then stored in `Vx`.
     LDK(V),
+
+    /// LD DT, `Vx`
+    ///
+    /// Op code: `Fx15`
+    ///
+    /// Sets the delay timer to `Vx`.
     LDDT(V),
+
+    /// LD ST, `Vx`
+    ///
+    /// Op code: `Fx18`
+    ///
+    /// Sets the sound timer to `Vx`.
     LDST(V),
+
+    /// ADD I, `Vx`
+    ///
+    /// Op code: `Fx1E`
+    ///
+    /// Adds `Vx` to I.
     ADDI(V),
+
+    /// LD F, `Vx`
+    ///
+    /// Op code: `Fx29`
+    ///
+    /// Sets I to the location of the sprite for the character in Vf.
     LDF(V),
+
+    /// LD B, `Vx`
+    ///
+    /// Op code: `Fx33`
+    ///
+    /// Stores the binary-coded decimal representation of `Vx`.
+    ///
+    /// # Binary-coded decimal representation
+    ///
+    /// The most significant of three digits at the address in I, the middle digit at I + 1, and
+    /// the least significant digit at I + 2. (In other words, take the decimal representation
+    /// of `Vx`, place the hundreds digit in memory at location in I, the tens digit at location I + 1,
+    /// and the ones digit at location I + 2.).
+    ///
+    /// # References
+    ///
+    /// - http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#Fx33
+    /// - https://en.m.wikipedia.org/wiki/Binary-coded_decimal
     LDB(V),
+
+    /// LD [I], `Vx`
+    ///
+    /// Op code: `Fx55`
+    ///
+    /// Stores V0 to `Vx` (including `Vx`) in memory starting at address I.
     LDIV(V),
+
+    /// LD `Vx`, [I]
+    ///
+    /// Op code: `Fx65`
+    ///
+    /// Fills V0 to `Vx` (including `Vx`) with values from memory starting at address I.
     LDVI(V),
 }
 
