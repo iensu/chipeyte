@@ -1,9 +1,9 @@
 use crate::{
-    cpu::{registers::NumericRegister, INSTRUCTION_LENGTH, PROGRAM_START},
+    cpu::{INSTRUCTION_LENGTH, PROGRAM_START},
     types::*,
     ChipeyteError, Memory, Registers,
 };
-use std::convert::TryFrom;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const STACK_ENTRY_LENGTH: u8 = 2;
 
@@ -172,7 +172,7 @@ pub enum Ops {
     ///
     /// Op code: `Cxnn`
     ///
-    /// Sets `Vx` to the result of a bitwise and operation on a random number (Typically: 0 to 255) and `nn`.
+    /// Sets `Vx` to the result of a bitwise AND operation on a random number (0 to 255) and `nn`.
     RND(V, Byte),
 
     /// DRW `Vx`, `Vy`, `n`
@@ -235,7 +235,7 @@ pub enum Ops {
     ///
     /// Op code: `Fx29`
     ///
-    /// Sets I to the location of the sprite for the character in Vf.
+    /// Sets I to the location of the sprite for the character in `Vx`.
     LDF(V),
 
     /// LD B, `Vx`
@@ -321,8 +321,7 @@ impl Callable for Ops {
             }
 
             Ops::SE(v, byte) => {
-                let register = NumericRegister::try_from(*v)?;
-                let value = registers.get_numeric_register(&register);
+                let value = registers.get_data_register_value(*v)?;
 
                 if value == *byte {
                     registers.pc += INSTRUCTION_LENGTH;
@@ -331,8 +330,7 @@ impl Callable for Ops {
             }
 
             Ops::SNE(v, byte) => {
-                let register = NumericRegister::try_from(*v)?;
-                let value = registers.get_numeric_register(&register);
+                let value = registers.get_data_register_value(*v)?;
 
                 if value != *byte {
                     registers.pc += INSTRUCTION_LENGTH;
@@ -341,10 +339,8 @@ impl Callable for Ops {
             }
 
             Ops::SEV(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx)?;
-                let reg_y = NumericRegister::try_from(*vy)?;
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
                 if x == y {
                     registers.pc += INSTRUCTION_LENGTH;
@@ -352,150 +348,104 @@ impl Callable for Ops {
                 Ok(())
             }
 
-            Ops::LD(v, byte) => {
-                let register = NumericRegister::try_from(*v)?;
-
-                registers.set_numeric_register(&register, *byte);
-                Ok(())
-            }
+            Ops::LD(v, byte) => registers.set_data_register_value(*v, *byte),
 
             Ops::ADD(v, byte) => {
-                let register = NumericRegister::try_from(*v)?;
-
-                let value = registers.get_numeric_register(&register);
+                let value = registers.get_data_register_value(*v)?;
                 let result = byte.wrapping_add(value);
 
-                registers.set_numeric_register(&register, result);
-                Ok(())
+                registers.set_data_register_value(*v, result)
             }
 
             Ops::LDV(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
-
-                registers.set_numeric_register(&reg_x, registers.get_numeric_register(&reg_y));
-                Ok(())
+                let y = registers.get_data_register_value(*vy)?;
+                registers.set_data_register_value(*vx, y)
             }
 
             Ops::OR(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
-
-                registers.set_numeric_register(&reg_x, x | y);
-                Ok(())
+                registers.set_data_register_value(*vx, x | y)
             }
 
             Ops::AND(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
-
-                registers.set_numeric_register(&reg_x, x & y);
-                Ok(())
+                registers.set_data_register_value(*vx, x & y)
             }
 
             Ops::XOR(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
-
-                registers.set_numeric_register(&reg_x, x ^ y);
-                Ok(())
+                registers.set_data_register_value(*vx, x ^ y)
             }
 
             Ops::ADDV(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
-
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
                 let value = x as u16 + y as u16;
 
-                registers.set_numeric_register(&reg_x, value as u8);
+                registers.set_data_register_value(*vx, value as u8)?;
 
                 if value > u8::MAX.into() {
-                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                    registers.set_data_register_value(0x0f, 1)
                 } else {
-                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                    registers.set_data_register_value(0x0f, 0)
                 }
-
-                Ok(())
             }
 
             Ops::SUB(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
-
-                registers.set_numeric_register(&reg_x, x.wrapping_sub(y));
+                registers.set_data_register_value(*vx, x.wrapping_sub(y))?;
 
                 if x > y {
-                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                    registers.set_data_register_value(0x0f, 1)
                 } else {
-                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                    registers.set_data_register_value(0x0f, 0)
                 }
-
-                Ok(())
             }
 
             Ops::SHR(vx) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-
-                let x = registers.get_numeric_register(&reg_x);
+                let x = registers.get_data_register_value(*vx)?;
 
                 let least_significant_bit = x & 0b0000_0001;
 
                 registers.vf = least_significant_bit;
 
-                registers.set_numeric_register(&reg_x, x >> 1);
-                Ok(())
+                registers.set_data_register_value(*vx, x >> 1)
             }
 
             Ops::SUBN(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
-
-                registers.set_numeric_register(&reg_x, y.wrapping_sub(x));
+                registers.set_data_register_value(*vx, y.wrapping_sub(x))?;
 
                 if y > x {
-                    registers.set_numeric_register(&NumericRegister::VF, 1);
+                    registers.set_data_register_value(0x0f, 1)
                 } else {
-                    registers.set_numeric_register(&NumericRegister::VF, 0);
+                    registers.set_data_register_value(0x0f, 0)
                 }
-
-                Ok(())
             }
 
             Ops::SHL(vx) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let x = registers.get_numeric_register(&reg_x);
+                let x = registers.get_data_register_value(*vx)?;
 
                 let most_significant_bit = x & 0b1000_0000;
 
                 registers.vf = most_significant_bit;
 
-                registers.set_numeric_register(&reg_x, x << 1);
-                Ok(())
+                registers.set_data_register_value(*vx, x << 1)
             }
 
             Ops::SNEV(vx, vy) => {
-                let reg_x = NumericRegister::try_from(*vx).unwrap();
-                let reg_y = NumericRegister::try_from(*vy).unwrap();
-
-                let x = registers.get_numeric_register(&reg_x);
-                let y = registers.get_numeric_register(&reg_y);
+                let x = registers.get_data_register_value(*vx)?;
+                let y = registers.get_data_register_value(*vy)?;
 
                 if x != y {
                     registers.pc += INSTRUCTION_LENGTH;
@@ -542,21 +492,107 @@ impl Callable for Ops {
                 Ok(())
             }
 
-            Ops::RND(_, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::RND(vx, value) => {
+                let rand = random_number(u8::MAX.into()) as u8;
+
+                registers.set_data_register_value(*vx, value & rand)
+            }
+
             Ops::DRW(_, _, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+
             Ops::SKP(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+
             Ops::SKNP(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDVDT(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+
+            Ops::LDVDT(vx) => registers.set_data_register_value(*vx, registers.dt),
+
             Ops::LDK(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDDT(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDST(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::ADDI(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDF(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDB(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDIV(_) => Err(ChipeyteError::OpNotImplemented(*self)),
-            Ops::LDVI(_) => Err(ChipeyteError::OpNotImplemented(*self)),
+
+            Ops::LDDT(vx) => {
+                registers.dt = registers.get_data_register_value(*vx)?;
+                Ok(())
+            }
+
+            Ops::LDST(vx) => {
+                registers.st = registers.get_data_register_value(*vx)?;
+                Ok(())
+            }
+
+            Ops::ADDI(vx) => {
+                let x = registers.get_data_register_value(*vx)?;
+
+                let address = registers.i + x as u16;
+
+                if address > 0x0FFF || address < PROGRAM_START {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!(
+                            "Address '{:04x?}' is outside of program area {:04x?}-0fff",
+                            address, PROGRAM_START
+                        ),
+                    ));
+                } else if address % 2 != 0 {
+                    return Err(ChipeyteError::OpFailed(
+                        *self,
+                        format!("'{:04x?}' is an invalid instruction location", address),
+                    ));
+                }
+
+                registers.i = address;
+
+                Ok(())
+            }
+
+            Ops::LDF(vx) => {
+                // A digit between 0-15
+                let digit = registers.get_data_register_value(*vx)?;
+
+                registers.i = Memory::get_sprite_location_for(digit)?;
+                Ok(())
+            }
+
+            Ops::LDB(vx) => {
+                let number = registers.get_data_register_value(*vx)?;
+                let hundreds = (number / 100) % 10;
+                let tens = (number / 10) % 10;
+                let ones = number % 10;
+
+                memory.set(registers.i.into(), hundreds);
+                memory.set((registers.i + 1).into(), tens);
+                memory.set((registers.i + 2).into(), ones);
+                Ok(())
+            }
+
+            Ops::LDIV(vx) => {
+                let base_addr = registers.i as usize;
+
+                for reg in 0..=*vx {
+                    let value = registers.get_data_register_value(reg)?;
+                    memory.set(base_addr + reg as usize, value);
+                }
+                Ok(())
+            }
+
+            Ops::LDVI(vx) => {
+                let base_addr = registers.i as usize;
+
+                for reg in 0..=*vx {
+                    let value = memory.get(base_addr + reg as usize);
+                    registers.set_data_register_value(reg, value)?;
+                }
+                Ok(())
+            }
         }
     }
+}
+
+fn random_number(max_val: u32) -> u32 {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos();
+
+    return nanos % max_val;
 }
 
 #[cfg(test)]
@@ -1124,5 +1160,34 @@ mod tests {
             }
             _ => panic!("Did not return appropriate error!"),
         }
+    }
+
+    #[test]
+    fn op_rnd_sets_vx_to_a_random_number() {
+        let ops = vec![Ops::RND(0x0c, 0xff)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        // This test might fail if the generated random number is 0
+        assert!(registers.vc > 0);
+    }
+
+    #[test]
+    fn op_name() {
+        let ops = vec![Ops::LDVDT(0x0d)];
+        let mut memory = Memory::new();
+        let mut registers = Registers::new(PROGRAM_START);
+
+        registers.dt = 42;
+
+        ops.iter().for_each(|op| {
+            (*op).call(&mut registers, &mut memory).unwrap();
+        });
+
+        assert_eq!(registers.vd, 42);
     }
 }

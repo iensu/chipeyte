@@ -1,3 +1,4 @@
+use crate::ChipeyteError;
 use std::fmt::Display;
 
 /// # Chip-8 Memory Map
@@ -161,6 +162,18 @@ impl Memory {
 
         self.set(index, x);
         self.set(index + 1, y);
+    }
+
+    /// Returns the memory location of digit sprite. Possible digit sprites are 0-F.
+    pub fn get_sprite_location_for(digit: u8) -> Result<u16, ChipeyteError> {
+        if digit > 15 {
+            return Err(ChipeyteError::UnsupportedSprite(digit));
+        }
+
+        // Sprites are located between 0x0100-0x01F0, where bits 4-7 designate the character
+        let d = (digit & 0b0000_0001 << 4) as u16;
+
+        Ok(0x0100 + d)
     }
 }
 

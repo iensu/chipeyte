@@ -1,51 +1,5 @@
 use crate::ChipeyteError;
 
-#[derive(Debug)]
-pub enum NumericRegister {
-    V0,
-    V1,
-    V2,
-    V3,
-    V4,
-    V5,
-    V6,
-    V7,
-    V8,
-    V9,
-    VA,
-    VB,
-    VC,
-    VD,
-    VE,
-    VF,
-}
-
-impl std::convert::TryFrom<u8> for NumericRegister {
-    type Error = ChipeyteError;
-
-    fn try_from(register: u8) -> Result<Self, ChipeyteError> {
-        match register {
-            0x0 => Ok(NumericRegister::V0),
-            0x1 => Ok(NumericRegister::V1),
-            0x2 => Ok(NumericRegister::V2),
-            0x3 => Ok(NumericRegister::V3),
-            0x4 => Ok(NumericRegister::V4),
-            0x5 => Ok(NumericRegister::V5),
-            0x6 => Ok(NumericRegister::V6),
-            0x7 => Ok(NumericRegister::V7),
-            0x8 => Ok(NumericRegister::V8),
-            0x9 => Ok(NumericRegister::V9),
-            0xA => Ok(NumericRegister::VA),
-            0xB => Ok(NumericRegister::VB),
-            0xC => Ok(NumericRegister::VC),
-            0xD => Ok(NumericRegister::VD),
-            0xE => Ok(NumericRegister::VE),
-            0xF => Ok(NumericRegister::VF),
-            _ => Err(ChipeyteError::BadNumericRegister(register)),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Registers {
     pub i: u16,  // Stores memory addresses, only lowest 12 bits used.
@@ -79,77 +33,99 @@ impl Registers {
         }
     }
 
-    pub fn get_numeric_register(&self, register: &NumericRegister) -> u8 {
+    pub fn get_data_register_value(&self, register: u8) -> Result<u8, ChipeyteError> {
         match register {
-            NumericRegister::V0 => self.v0,
-            NumericRegister::V1 => self.v1,
-            NumericRegister::V2 => self.v2,
-            NumericRegister::V3 => self.v3,
-            NumericRegister::V4 => self.v4,
-            NumericRegister::V5 => self.v5,
-            NumericRegister::V6 => self.v6,
-            NumericRegister::V7 => self.v7,
-            NumericRegister::V8 => self.v8,
-            NumericRegister::V9 => self.v9,
-            NumericRegister::VA => self.va,
-            NumericRegister::VB => self.vb,
-            NumericRegister::VC => self.vc,
-            NumericRegister::VD => self.vd,
-            NumericRegister::VE => self.ve,
-            NumericRegister::VF => self.vf,
+            0x0 => Ok(self.v0),
+            0x1 => Ok(self.v1),
+            0x2 => Ok(self.v2),
+            0x3 => Ok(self.v3),
+            0x4 => Ok(self.v4),
+            0x5 => Ok(self.v5),
+            0x6 => Ok(self.v6),
+            0x7 => Ok(self.v7),
+            0x8 => Ok(self.v8),
+            0x9 => Ok(self.v9),
+            0xa => Ok(self.va),
+            0xb => Ok(self.vb),
+            0xc => Ok(self.vc),
+            0xd => Ok(self.vd),
+            0xe => Ok(self.ve),
+            0xf => Ok(self.vf),
+            _ => Err(ChipeyteError::BadDataRegister(register)),
         }
     }
 
-    pub fn set_numeric_register(&mut self, register: &NumericRegister, value: u8) {
+    pub fn set_data_register_value(
+        &mut self,
+        register: u8,
+        value: u8,
+    ) -> Result<(), ChipeyteError> {
         match register {
-            NumericRegister::V0 => {
+            0x0 => {
                 self.v0 = value;
+                Ok(())
             }
-            NumericRegister::V1 => {
+            0x1 => {
                 self.v1 = value;
+                Ok(())
             }
-            NumericRegister::V2 => {
+            0x2 => {
                 self.v2 = value;
+                Ok(())
             }
-            NumericRegister::V3 => {
+            0x3 => {
                 self.v3 = value;
+                Ok(())
             }
-            NumericRegister::V4 => {
+            0x4 => {
                 self.v4 = value;
+                Ok(())
             }
-            NumericRegister::V5 => {
+            0x5 => {
                 self.v5 = value;
+                Ok(())
             }
-            NumericRegister::V6 => {
+            0x6 => {
                 self.v6 = value;
+                Ok(())
             }
-            NumericRegister::V7 => {
+            0x7 => {
                 self.v7 = value;
+                Ok(())
             }
-            NumericRegister::V8 => {
+            0x8 => {
                 self.v8 = value;
+                Ok(())
             }
-            NumericRegister::V9 => {
+            0x9 => {
                 self.v9 = value;
+                Ok(())
             }
-            NumericRegister::VA => {
+            0xa => {
                 self.va = value;
+                Ok(())
             }
-            NumericRegister::VB => {
+            0xb => {
                 self.vb = value;
+                Ok(())
             }
-            NumericRegister::VC => {
+            0xc => {
                 self.vc = value;
+                Ok(())
             }
-            NumericRegister::VD => {
+            0xd => {
                 self.vd = value;
+                Ok(())
             }
-            NumericRegister::VE => {
+            0xe => {
                 self.ve = value;
+                Ok(())
             }
-            NumericRegister::VF => {
+            0xf => {
                 self.vf = value;
+                Ok(())
             }
+            _ => Err(ChipeyteError::BadDataRegister(register)),
         }
     }
 }

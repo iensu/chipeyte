@@ -5,8 +5,9 @@ use std::fmt;
 #[derive(Debug)]
 pub enum ChipeyteError {
     OpNotImplemented(Ops),
-    BadNumericRegister(u8),
+    BadDataRegister(u8),
     OpFailed(Ops, String),
+    UnsupportedSprite(u8),
 }
 
 impl fmt::Display for ChipeyteError {
@@ -20,9 +21,11 @@ impl fmt::Display for ChipeyteError {
                 write!(f, "Operation {:?} failed with message: {}", op, msg)
             }
 
-            ChipeyteError::BadNumericRegister(register) => {
-                write!(f, "Unknown numeric register {:x?}", register)
+            ChipeyteError::BadDataRegister(register) => {
+                write!(f, "Unknown data register {:x?}", register)
             }
+
+            ChipeyteError::UnsupportedSprite(digit) => write!(f, "Unsupported sprite {:x?}", digit),
         }
     }
 }
