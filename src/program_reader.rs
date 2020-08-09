@@ -9,7 +9,8 @@ pub fn read(path: &Path) -> Vec<u16> {
     let contents = fs::read_to_string(path).expect("Something went wrong when reading the file!");
 
     contents
-        .split_whitespace()
+        .lines()
+        .filter(|line| !line.starts_with(";"))
         .map(|line| u16::from_str_radix(line, 16).unwrap())
         .collect()
 }
