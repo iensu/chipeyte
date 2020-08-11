@@ -9,3 +9,14 @@ edition = "2018"
 [dependencies]
 log = "0.4.11"
 env_logger = "0.7.1"
+luminance = "0.41"
+luminance-glfw = "0.13"
+luminance-windowing = "0.9"
+luminance-gl = "0.14.1"
+glfw = "0.39"
+
+[dependencies.sdl2]
+version = "0.34.2"
+features = ["gfx"]
+
+# "image", "mixer", "ttf"

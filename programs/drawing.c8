@@ -1,0 +1,146 @@
+;;;; Drawing
+A100
+;;
+6100
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A110
+;;
+6105
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A120
+;;
+610a
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A130
+;;
+610f
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A140
+;;
+6114
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A150
+;;
+6119
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A160
+;;
+611e
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A170
+;;
+6123
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A180
+;;
+6128
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A190
+;;
+612d
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A1a0
+;;
+6132
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A1b0
+;;
+6137
+;;
+6200
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A1c0
+;;
+613c
+;;
+6200
+;;
+0200:d125
+;;;; END DRAWING
+;;;; Drawing
+A1d0
+;;
+6100
+;;
+6206
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A1e0
+;;
+6105
+;;
+6206
+;;
+d125
+;;;; END DRAWING
+;;;; Drawing
+A1f0
+;;
+610a
+;;
+6206
+;;
+d125
+;;;; END DRAWING
+00e0
+1200

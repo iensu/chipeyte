@@ -1,7 +1,7 @@
 use std::fs;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
-pub fn read(path: &Path) -> Vec<u16> {
+pub fn read(path: &Path) -> HashMap<usize, u16> {
     if !path.exists() {
         panic!("File {:?} does not exist!", path);
     }
@@ -10,7 +10,13 @@ pub fn read(path: &Path) -> Vec<u16> {
 
     contents
         .lines()
-        .filter(|line| !line.starts_with(";"))
-        .map(|line| u16::from_str_radix(line, 16).unwrap())
-        .collect()
+        .filter(|line| !line.starts_with(";") && line.trim().len() > 0)
+        .fold(HashMap::<usize, u16>::new(), |mut acc, line| {
+            let items = line.split(":").collect::<Vec<&str>>();
+            let address = usize::from_str_radix(items[0].trim(), 16).unwrap();
+            let instruction = u16::from_str_radix(items[1].trim(), 16).unwrap();
+
+            acc.insert(address, instruction);
+            acc
+        })
 }

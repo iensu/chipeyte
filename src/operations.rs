@@ -8,7 +8,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const STACK_ENTRY_LENGTH: u8 = 2;
 
 pub trait Callable {
-    fn call(&self, register: &mut Registers, memory: &mut Memory) -> Result<(), ChipeyteError>;
+    fn call(
+        &self,
+        register: &mut Registers,
+        memory: &mut Memory,
+        canvas: &mut dyn crate::Drawable,
+    ) -> Result<(), ChipeyteError>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -179,7 +184,14 @@ pub enum Ops {
     ///
     /// Op code: `Dxyn`
     ///
-    /// Draws a sprite at coordinate (`Vx`, `Vy`) that has a width of 8 pixels and a height of `n` pixels.
+    /// Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+    ///
+    /// The interpreter reads n bytes from memory, starting at the address stored in I. These bytes
+    /// are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the
+    /// existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise it is set
+    /// to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
+    /// it wraps around to the opposite side of the screen. See instruction 8xy3 for more information
+    /// on XOR, and section 2.4, Display, for more information on the Chip-8 screen and sprites.
     DRW(V, V, Nibble),
 
     /// SKP `Vx`
@@ -273,7 +285,12 @@ pub enum Ops {
 }
 
 impl Callable for Ops {
-    fn call(&self, registers: &mut Registers, memory: &mut Memory) -> Result<(), ChipeyteError> {
+    fn call(
+        &self,
+        registers: &mut Registers,
+        memory: &mut Memory,
+        canvas: &mut dyn crate::Drawable,
+    ) -> Result<(), ChipeyteError> {
         match &*self {
             Ops::UNKNOWN(op) => Err(ChipeyteError::OpFailed(
                 *self,
@@ -282,7 +299,10 @@ impl Callable for Ops {
 
             Ops::SYS(_) => Ok(()),
 
-            Ops::CLS => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::CLS => {
+                canvas.clear();
+                Ok(())
+            }
 
             Ops::RET => {
                 registers.pc = memory.get_u16(registers.sp.into());
@@ -498,7 +518,34 @@ impl Callable for Ops {
                 registers.set_data_register_value(*vx, value & rand)
             }
 
-            Ops::DRW(_, _, _) => Err(ChipeyteError::OpNotImplemented(*self)),
+            Ops::DRW(vx, vy, n) => {
+                let base_x = registers.get_data_register_value(*vx)?;
+                let base_y = registers.get_data_register_value(*vy)?;
+
+                let bytes = (0..(*n as u16))
+                    .map(move |offset| {
+                        let addr = (registers.i + offset) as usize;
+                        memory.get(addr)
+                    })
+                    .collect::<Vec<u8>>();
+
+                for (y_offset, byte) in bytes.iter().enumerate() {
+                    let mut mask = 0b1000_0000;
+
+                    for x_offset in 0..8 {
+                        let is_one = (byte & mask) > 0;
+                        if is_one {
+                            let x = base_x + x_offset;
+                            let y = base_y + (y_offset as u8);
+                            canvas.draw(x, y);
+                        }
+
+                        mask >>= 1;
+                    }
+                }
+
+                Ok(())
+            }
 
             Ops::SKP(_) => Err(ChipeyteError::OpNotImplemented(*self)),
 
@@ -599,12 +646,40 @@ fn random_number(max_val: u32) -> u32 {
 mod tests {
     use super::*;
 
+    struct MockCanvas {
+        pixels: Vec<(u8, u8)>,
+    }
+
+    impl MockCanvas {
+        pub fn init() -> Self {
+            MockCanvas { pixels: vec![] }
+        }
+    }
+
+    impl crate::Drawable for MockCanvas {
+        fn clear(&mut self) {
+            self.pixels.clear();
+        }
+        fn draw(&mut self, x: u8, y: u8) {
+            self.pixels.push((x, y));
+        }
+        fn poll_events(&mut self) -> Option<crate::graphics::UserAction> {
+            None
+        }
+        fn get_pixels(&self) -> Vec<(u8, u8)> {
+            self.pixels.clone()
+        }
+    }
+
     #[test]
     fn op_sys_is_ignored() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::SYS(0x0aaa).call(&mut registers, &mut memory).unwrap();
+        Ops::SYS(0x0aaa)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         assert_eq!(registers, Registers::new(PROGRAM_START));
         assert_eq!(memory, Memory::new());
@@ -613,14 +688,19 @@ mod tests {
     #[test]
     fn op_ret_returns() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::CALL(0x0aaa).call(&mut registers, &mut memory).unwrap();
+        Ops::CALL(0x0aaa)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         assert_eq!(registers.sp, 0x0002);
         assert_eq!(registers.pc, 0x0aaa);
 
-        Ops::RET.call(&mut registers, &mut memory).unwrap();
+        Ops::RET
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         assert_eq!(memory.get_u16(0x0002), 0x0200);
         assert_eq!(registers.sp, 0x00);
@@ -629,9 +709,12 @@ mod tests {
     #[test]
     fn op_jp_jumps_to_addr() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::JP(0x0aaa).call(&mut registers, &mut memory).unwrap();
+        Ops::JP(0x0aaa)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         assert_eq!(registers.pc, 0x0aaa);
     }
@@ -639,10 +722,11 @@ mod tests {
     #[test]
     fn op_jp_must_be_within_memory_bounds() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         if let Err(ChipeyteError::OpFailed(op, msg)) =
-            Ops::JP(0xf000).call(&mut registers, &mut memory)
+            Ops::JP(0xf000).call(&mut registers, &mut memory, &mut canvas)
         {
             assert_eq!(op, Ops::JP(0xf000));
             assert!(msg.contains("out-of-bounds"));
@@ -655,9 +739,12 @@ mod tests {
     #[test]
     fn op_call_calls_addr() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::CALL(0x0aaa).call(&mut registers, &mut memory).unwrap();
+        Ops::CALL(0x0aaa)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         assert_eq!(registers.pc, 0x0aaa);
         assert_eq!(registers.sp, 0x0002);
@@ -667,10 +754,11 @@ mod tests {
     #[test]
     fn op_call_addr_must_be_within_memory_bounds() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         if let Err(ChipeyteError::OpFailed(op, msg)) =
-            Ops::CALL(0xf000).call(&mut registers, &mut memory)
+            Ops::CALL(0xf000).call(&mut registers, &mut memory, &mut canvas)
         {
             assert_eq!(op, Ops::CALL(0xf000));
             assert!(msg.contains("out-of-bounds"));
@@ -683,13 +771,14 @@ mod tests {
     #[test]
     fn op_se_vkk_increments_pc_if_v_equals_kk() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SE(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -699,13 +788,14 @@ mod tests {
     #[test]
     fn op_se_vkk_does_not_increment_pc_if_v_not_equal_to_kk() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x84)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SE(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -715,13 +805,14 @@ mod tests {
     #[test]
     fn op_sne_vkk_does_increment_pc_if_v_equals_kk() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SNE(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -731,13 +822,14 @@ mod tests {
     #[test]
     fn op_sne_vkk_increments_pc_if_v_not_equal_to_kk() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SNE(0x08, 0x84)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -747,16 +839,17 @@ mod tests {
     #[test]
     fn op_se_vxvy_increments_pc_if_vx_equals_vy() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0a, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SEV(0x08, 0x0a)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -766,16 +859,17 @@ mod tests {
     #[test]
     fn op_se_vxvy_does_not_increment_pc_if_vx_not_equal_to_vy() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x08, 0x42)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0a, 0x84)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::SE(0x08, 0x0a)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.sp, 0);
@@ -785,10 +879,11 @@ mod tests {
     #[test]
     fn op_ld_vkk_sets_register_v_to_kk() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0a, 0x66)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 0x66);
@@ -797,13 +892,14 @@ mod tests {
     #[test]
     fn op_add_vkk_adds_kk_to_v() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0, 30)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .expect("Failed to set register");
         Ops::ADD(0, 12)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .expect("Failed to add to register");
 
         assert_eq!(registers.v0, 42);
@@ -812,13 +908,14 @@ mod tests {
     #[test]
     fn op_add_vkk_adds_kk_to_v_no_carry() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0, 200)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .expect("Failed to set register");
         Ops::ADD(0, 200)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .expect("Failed to add to register");
 
         assert_eq!(registers.v0, 144);
@@ -828,13 +925,14 @@ mod tests {
     #[test]
     fn op_ld_vxvy_stores_vx_in_vy() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0b, 0x09)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LDV(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 9);
@@ -843,17 +941,18 @@ mod tests {
     #[test]
     fn op_or_vx_vy_stores_bitwise_or_in_vx() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0a, 0b1001_0111)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0b, 0b0110_1001)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         Ops::OR(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 0b1111_1111);
@@ -862,17 +961,18 @@ mod tests {
     #[test]
     fn op_and_vx_vy_stores_bitwise_and_in_vx() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0a, 0b1001_0111)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0b, 0b0110_1001)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         Ops::AND(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 0b0000_0001);
@@ -881,17 +981,18 @@ mod tests {
     #[test]
     fn op_xor_vx_vy_stores_bitwise_xor_in_vx() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0a, 0b1001_0111)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0b, 0b0110_1001)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         Ops::XOR(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 0b1111_1110);
@@ -900,28 +1001,29 @@ mod tests {
     #[test]
     fn op_add_vx_vy_adds_vy_to_vx_and_sets_carry() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x0a, 0b1111_1111)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
         Ops::LD(0x0b, 0b111_0000)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         Ops::ADDV(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 0b0110_1111);
         assert_eq!(registers.vf, 1);
 
         Ops::LD(0x0c, 0b0000_0011)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         Ops::ADDV(0x0b, 0x0c)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.vb, 0b0111_0011);
@@ -931,22 +1033,31 @@ mod tests {
     #[test]
     fn op_sub_vx_vy_subtract_vy_from_vx_and_set_not_borrow() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::LD(0x0a, 7).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0b, 3).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0c, 5).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0d, 9).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0a, 7)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0b, 3)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0c, 5)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0d, 9)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         Ops::SUB(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 4); // 7 - 3 = 4
         assert_eq!(registers.vf, 1);
 
         Ops::SUB(0x0c, 0x0d)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.vc, 252); // 5 - 9 [(252 + 9) % 256 = 5]  256 = u8::MAX + 1
@@ -956,22 +1067,31 @@ mod tests {
     #[test]
     fn op_subn_vx_vy_subtract_vx_from_vy_and_set_not_borrow() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
-        Ops::LD(0x0a, 7).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0b, 10).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0c, 12).call(&mut registers, &mut memory).unwrap();
-        Ops::LD(0x0d, 9).call(&mut registers, &mut memory).unwrap();
+        Ops::LD(0x0a, 7)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0b, 10)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0c, 12)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
+        Ops::LD(0x0d, 9)
+            .call(&mut registers, &mut memory, &mut canvas)
+            .unwrap();
 
         Ops::SUBN(0x0a, 0x0b)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.va, 3); // 10 - 7 = 3
         assert_eq!(registers.vf, 1);
 
         Ops::SUBN(0x0c, 0x0d)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
         assert_eq!(registers.vc, 253); // 9 - 12 = [(253 + 12) % 256 = 9]
@@ -982,10 +1102,13 @@ mod tests {
     fn op_shr_vx_right_shifts() {
         let ops = vec![Ops::LD(0x0a, 0b1111_1111), Ops::SHR(0x0a)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.va, 0b0111_1111);
@@ -995,10 +1118,13 @@ mod tests {
     fn op_shr_vx_stores_least_significant_bit_in_vf() {
         let instructions = vec![Ops::LD(0x0a, 0b1111_1111), Ops::SHR(0x0a)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         instructions.iter().for_each(|instruction| {
-            (*instruction).call(&mut registers, &mut memory).unwrap();
+            (*instruction)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.vf, 1);
@@ -1006,7 +1132,9 @@ mod tests {
         let instructions = vec![Ops::LD(0x0a, 0b0000_1110), Ops::SHR(0x0a)];
 
         instructions.iter().for_each(|instruction| {
-            (*instruction).call(&mut registers, &mut memory).unwrap();
+            (*instruction)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.vf, 0);
@@ -1016,10 +1144,13 @@ mod tests {
     fn op_shl_vx_left_shifts() {
         let ops = vec![Ops::LD(0x0a, 0b0111_1111), Ops::SHL(0x0a)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.va, 0b1111_1110);
@@ -1029,20 +1160,26 @@ mod tests {
     fn op_op_shl_stores_most_significant_bit_in_vf() {
         let ops = vec![Ops::LD(0x0a, 0b1111_0000), Ops::SHL(0x0a)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.vf, 0b1000_0000);
 
         let ops = vec![Ops::LD(0x0a, 0b0111_0000), Ops::SHL(0x0a)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.vf, 0);
@@ -1052,10 +1189,13 @@ mod tests {
     fn op_snev_increments_pc_if_vx_not_equals_vy() {
         let ops = vec![Ops::LD(0x0a, 42), Ops::LD(0x0b, 42), Ops::SNEV(0x0a, 0x0b)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.pc, PROGRAM_START);
@@ -1063,7 +1203,9 @@ mod tests {
         let ops = vec![Ops::LD(0x0a, 42), Ops::LD(0x0b, 24), Ops::SNEV(0x0a, 0x0b)];
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
@@ -1073,10 +1215,13 @@ mod tests {
     fn op_ldi_sets_i_register() {
         let ops = vec![Ops::LDI(0x0012)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.i, 0x0012);
@@ -1085,10 +1230,11 @@ mod tests {
     #[test]
     fn op_ldi_addr_must_be_within_memory_bounds() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         if let Err(ChipeyteError::OpFailed(op, msg)) =
-            Ops::LDI(0xf000).call(&mut registers, &mut memory)
+            Ops::LDI(0xf000).call(&mut registers, &mut memory, &mut canvas)
         {
             assert_eq!(op, Ops::LDI(0xf000));
             assert!(msg.contains("out-of-bounds"));
@@ -1102,10 +1248,13 @@ mod tests {
     fn op_jpv0_jumps_to_nnn_plus_v0() {
         let ops = vec![Ops::LD(0x00, 0x10), Ops::JPV0(0x0220)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.pc, 0x0230);
@@ -1114,13 +1263,14 @@ mod tests {
     #[test]
     fn op_jpv0_returns_error_if_resulting_address_is_out_of_bounds() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x00, 0xff)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
-        match Ops::JPV0(0x0fff).call(&mut registers, &mut memory) {
+        match Ops::JPV0(0x0fff).call(&mut registers, &mut memory, &mut canvas) {
             Err(ChipeyteError::OpFailed(Ops::JPV0(0x0fff), msg)) => {
                 assert!(msg.contains("outside of program area"));
             }
@@ -1131,13 +1281,14 @@ mod tests {
     #[test]
     fn op_jpv0_returns_error_if_resulting_address_is_outside_of_program_area() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x00, 0xff)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
-        match Ops::JPV0(0x0000).call(&mut registers, &mut memory) {
+        match Ops::JPV0(0x0000).call(&mut registers, &mut memory, &mut canvas) {
             Err(ChipeyteError::OpFailed(Ops::JPV0(0x0000), msg)) => {
                 assert!(msg.contains("outside of program area"));
             }
@@ -1148,13 +1299,14 @@ mod tests {
     #[test]
     fn op_jpv0_returns_error_if_resulting_address_is_an_invalid_instruction_position() {
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         Ops::LD(0x00, 0x07)
-            .call(&mut registers, &mut memory)
+            .call(&mut registers, &mut memory, &mut canvas)
             .unwrap();
 
-        match Ops::JPV0(0x0200).call(&mut registers, &mut memory) {
+        match Ops::JPV0(0x0200).call(&mut registers, &mut memory, &mut canvas) {
             Err(ChipeyteError::OpFailed(Ops::JPV0(0x0200), msg)) => {
                 assert!(msg.contains("invalid instruction address"));
             }
@@ -1166,10 +1318,13 @@ mod tests {
     fn op_rnd_sets_vx_to_a_random_number() {
         let ops = vec![Ops::RND(0x0c, 0xff)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         // This test might fail if the generated random number is 0
@@ -1180,12 +1335,15 @@ mod tests {
     fn op_name() {
         let ops = vec![Ops::LDVDT(0x0d)];
         let mut memory = Memory::new();
+        let mut canvas = MockCanvas::init();
         let mut registers = Registers::new(PROGRAM_START);
 
         registers.dt = 42;
 
         ops.iter().for_each(|op| {
-            (*op).call(&mut registers, &mut memory).unwrap();
+            (*op)
+                .call(&mut registers, &mut memory, &mut canvas)
+                .unwrap();
         });
 
         assert_eq!(registers.vd, 42);

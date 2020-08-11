@@ -10,9 +10,15 @@ use std::fmt::Display;
 pub const PROGRAM_START: u16 = 0x0200;
 pub const INSTRUCTION_LENGTH: u16 = 2;
 
+// TODO: This really should be done differently
+pub enum CpuState {
+    Continue,
+    End,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct CPU {
-    pub counter: u32,
+    pub(crate) counter: u32,
     pub registers: Registers,
 }
 
@@ -24,8 +30,17 @@ impl CPU {
         }
     }
 
-    pub fn tick(&mut self, memory: &mut Memory) -> Result<(), ChipeyteError> {
+    pub fn tick(
+        &mut self,
+        memory: &mut Memory,
+        canvas: &mut dyn crate::Drawable,
+    ) -> Result<CpuState, ChipeyteError> {
         let instruction = self.fetch(memory);
+
+        if instruction == 0 {
+            return Ok(CpuState::End);
+        }
+
         let operation = decode(instruction);
 
         log::info!(
@@ -36,15 +51,22 @@ impl CPU {
         );
 
         self.registers.pc += INSTRUCTION_LENGTH;
-        self.execute(operation, memory)
+        self.execute(operation, memory, canvas)?;
+
+        Ok(CpuState::Continue)
     }
 
     fn fetch(&self, memory: &Memory) -> u16 {
         memory.get_u16(self.registers.pc.into())
     }
 
-    fn execute(&mut self, operation: Ops, memory: &mut Memory) -> Result<(), ChipeyteError> {
-        operation.call(&mut self.registers, memory)
+    fn execute(
+        &mut self,
+        operation: Ops,
+        memory: &mut Memory,
+        canvas: &mut dyn crate::Drawable,
+    ) -> Result<(), ChipeyteError> {
+        operation.call(&mut self.registers, memory, canvas)
     }
 }
 
@@ -90,27 +112,45 @@ V | {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{graphics::UserAction, Drawable};
+    use std::collections::HashMap;
+
+    struct FakeCanvas {}
+    impl Drawable for FakeCanvas {
+        fn clear(&mut self) {}
+        fn draw(&mut self, _x: u8, _y: u8) {}
+        fn poll_events(&mut self) -> Option<UserAction> {
+            None
+        }
+        fn get_pixels(&self) -> Vec<(u8, u8)> {
+            vec![]
+        }
+    }
 
     #[test]
     fn cpu_increments_pc_during_tick() {
         let mut memory = Memory::new();
+        let mut canvas = FakeCanvas {};
         let mut cpu = CPU::new(0, PROGRAM_START);
 
-        let program = vec![0x0aaa, 0x0aaa, 0x0aaa];
+        let mut program = HashMap::<usize, u16>::new();
+        program.insert(0, 0x0aaa);
+        program.insert(2, 0x0aaa);
+        program.insert(4, 0x0aaa);
 
         memory.load_program(PROGRAM_START.into(), &program);
 
         assert_eq!(cpu.registers.pc, PROGRAM_START);
 
-        cpu.tick(&mut memory).unwrap();
+        cpu.tick(&mut memory, &mut canvas).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
 
-        cpu.tick(&mut memory).unwrap();
+        cpu.tick(&mut memory, &mut canvas).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 2);
 
-        cpu.tick(&mut memory).unwrap();
+        cpu.tick(&mut memory, &mut canvas).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 3);
     }
