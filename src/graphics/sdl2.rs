@@ -2,6 +2,7 @@ use super::{Color, Drawable, UserAction};
 use sdl2::{
     self, event::Event, keyboard::Keycode, rect::Rect, render::Canvas, video::Window, EventPump,
 };
+use std::collections::HashSet;
 
 impl Into<sdl2::pixels::Color> for Color {
     fn into(self) -> sdl2::pixels::Color {
@@ -14,7 +15,7 @@ pub struct Sdl2Canvas {
     canvas: Canvas<Window>,
     bg_color: Color,
     fg_color: Color,
-    pixels: Vec<(u8, u8)>,
+    pixels: HashSet<(u8, u8)>,
     pixel_size: u32,
 }
 
@@ -47,7 +48,7 @@ impl Sdl2Canvas {
             fg_color,
             bg_color,
             pixel_size,
-            pixels: vec![],
+            pixels: HashSet::new(),
         }
     }
 }
@@ -60,9 +61,19 @@ impl Drawable for Sdl2Canvas {
         self.canvas.present();
     }
 
-    fn draw(&mut self, x: u8, y: u8) {
-        self.pixels.push((x, y));
+    fn remove_pixel(&mut self, x: u8, y: u8) {
+        self.pixels.remove(&(x, y));
+    }
 
+    fn has_pixel(&self, x: u8, y: u8) -> bool {
+        self.pixels.contains(&(x, y))
+    }
+
+    fn add_pixel(&mut self, x: u8, y: u8) {
+        self.pixels.insert((x, y));
+    }
+
+    fn render(&mut self) {
         self.canvas.set_draw_color(self.bg_color.clone());
         self.canvas.clear();
 
@@ -98,7 +109,7 @@ impl Drawable for Sdl2Canvas {
         })
     }
 
-    fn get_pixels(&self) -> Vec<(u8, u8)> {
+    fn get_pixels(&self) -> HashSet<(u8, u8)> {
         self.pixels.clone()
     }
 }

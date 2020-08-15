@@ -190,8 +190,7 @@ pub enum Ops {
     /// are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the
     /// existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise it is set
     /// to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
-    /// it wraps around to the opposite side of the screen. See instruction 8xy3 for more information
-    /// on XOR, and section 2.4, Display, for more information on the Chip-8 screen and sprites.
+    /// it wraps around to the opposite side of the screen.
     DRW(V, V, Nibble),
 
     /// SKP `Vx`
@@ -521,13 +520,16 @@ impl Callable for Ops {
             Ops::DRW(vx, vy, n) => {
                 let base_x = registers.get_data_register_value(*vx)?;
                 let base_y = registers.get_data_register_value(*vy)?;
+                let sprite_addr = registers.i;
 
                 let bytes = (0..(*n as u16))
                     .map(move |offset| {
-                        let addr = (registers.i + offset) as usize;
+                        let addr = (sprite_addr + offset) as usize;
                         memory.get(addr)
                     })
                     .collect::<Vec<u8>>();
+
+                let mut has_removed_pixel = false;
 
                 for (y_offset, byte) in bytes.iter().enumerate() {
                     let mut mask = 0b1000_0000;
@@ -535,14 +537,24 @@ impl Callable for Ops {
                     for x_offset in 0..8 {
                         let is_one = (byte & mask) > 0;
                         if is_one {
-                            let x = base_x + x_offset;
-                            let y = base_y + (y_offset as u8);
-                            canvas.draw(x, y);
+                            let x = (base_x + x_offset) % 64;
+                            let y = (base_y + (y_offset as u8)) % 32;
+
+                            if canvas.has_pixel(x, y) {
+                                canvas.remove_pixel(x, y);
+                                has_removed_pixel = true;
+                            } else {
+                                canvas.add_pixel(x, y);
+                            }
                         }
 
                         mask >>= 1;
                     }
                 }
+
+                registers.vf = if has_removed_pixel { 1 } else { 0 };
+
+                canvas.render();
 
                 Ok(())
             }
@@ -570,18 +582,13 @@ impl Callable for Ops {
 
                 let address = registers.i + x as u16;
 
-                if address > 0x0FFF || address < PROGRAM_START {
+                if address > 0x0FFF {
                     return Err(ChipeyteError::OpFailed(
                         *self,
                         format!(
                             "Address '{:04x?}' is outside of program area {:04x?}-0fff",
                             address, PROGRAM_START
                         ),
-                    ));
-                } else if address % 2 != 0 {
-                    return Err(ChipeyteError::OpFailed(
-                        *self,
-                        format!("'{:04x?}' is an invalid instruction location", address),
                     ));
                 }
 

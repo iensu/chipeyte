@@ -34,7 +34,7 @@ fn main() {
 
     memory.load_program(cpu::PROGRAM_START.into(), &program);
 
-    let fg_color = Color(255, 255, 255);
+    let fg_color = Color(0, 255, 0);
     let bg_color = Color(0, 0, 0);
     let mut canvas = Canvas::init(fg_color, bg_color);
 

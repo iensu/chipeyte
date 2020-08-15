@@ -1,7 +1,7 @@
-mod lumi;
+use std::collections::HashSet;
+
 mod sdl2;
 
-pub use crate::graphics::lumi::LumiCanvas;
 pub use crate::graphics::sdl2::Sdl2Canvas;
 
 #[derive(Debug)]
@@ -12,11 +12,17 @@ pub enum UserAction {
 pub trait Drawable {
     fn clear(&mut self);
 
-    fn draw(&mut self, x: u8, y: u8);
+    fn add_pixel(&mut self, x: u8, y: u8);
+
+    fn remove_pixel(&mut self, x: u8, y: u8);
+
+    fn has_pixel(&self, x: u8, y: u8) -> bool;
+
+    fn render(&mut self);
 
     fn poll_events(&mut self) -> Option<UserAction>;
 
-    fn get_pixels(&self) -> Vec<(u8, u8)>;
+    fn get_pixels(&self) -> HashSet<(u8, u8)>;
 }
 
 #[derive(Clone)]
