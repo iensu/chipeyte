@@ -113,24 +113,46 @@ V | {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02
 mod tests {
     use super::*;
     use crate::{graphics::UserAction, Drawable};
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
-    struct FakeCanvas {}
-    impl Drawable for FakeCanvas {
-        fn clear(&mut self) {}
-        fn draw(&mut self, _x: u8, _y: u8) {}
+    struct MockScreen {
+        pixels: HashSet<(u8, u8)>,
+    }
+
+    impl MockScreen {
+        pub fn init() -> Self {
+            MockScreen {
+                pixels: HashSet::new(),
+            }
+        }
+    }
+
+    impl Drawable for MockScreen {
+        fn clear(&mut self) {
+            self.pixels.clear();
+        }
         fn poll_events(&mut self) -> Option<UserAction> {
             None
         }
-        fn get_pixels(&self) -> Vec<(u8, u8)> {
-            vec![]
+        fn get_pixels(&self) -> HashSet<(u8, u8)> {
+            self.pixels.clone()
         }
+        fn add_pixel(&mut self, x: u8, y: u8) {
+            self.pixels.insert((x, y));
+        }
+        fn remove_pixel(&mut self, x: u8, y: u8) {
+            self.pixels.remove(&(x, y));
+        }
+        fn has_pixel(&self, x: u8, y: u8) -> bool {
+            self.pixels.contains(&(x, y))
+        }
+        fn render(&mut self) {}
     }
 
     #[test]
     fn cpu_increments_pc_during_tick() {
         let mut memory = Memory::new();
-        let mut canvas = FakeCanvas {};
+        let mut screen = MockScreen::init();
         let mut cpu = CPU::new(0, PROGRAM_START);
 
         let mut program = HashMap::<usize, u16>::new();
@@ -142,15 +164,15 @@ mod tests {
 
         assert_eq!(cpu.registers.pc, PROGRAM_START);
 
-        cpu.tick(&mut memory, &mut canvas).unwrap();
+        cpu.tick(&mut memory, &mut screen).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
 
-        cpu.tick(&mut memory, &mut canvas).unwrap();
+        cpu.tick(&mut memory, &mut screen).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 2);
 
-        cpu.tick(&mut memory, &mut canvas).unwrap();
+        cpu.tick(&mut memory, &mut screen).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 3);
     }

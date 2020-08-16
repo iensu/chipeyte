@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 mod sdl2;
 
-pub use crate::graphics::sdl2::Sdl2Canvas;
+pub use crate::graphics::sdl2::Sdl2Screen;
 
 #[derive(Debug)]
 pub enum UserAction {

@@ -10,7 +10,7 @@ impl Into<sdl2::pixels::Color> for Color {
     }
 }
 
-pub struct Sdl2Canvas {
+pub struct Sdl2Screen {
     event_pump: EventPump,
     canvas: Canvas<Window>,
     bg_color: Color,
@@ -19,8 +19,8 @@ pub struct Sdl2Canvas {
     pixel_size: u32,
 }
 
-impl Sdl2Canvas {
-    pub fn init(fg_color: Color, bg_color: Color) -> Sdl2Canvas {
+impl Sdl2Screen {
+    pub fn init(fg_color: Color, bg_color: Color) -> Sdl2Screen {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
@@ -42,7 +42,7 @@ impl Sdl2Canvas {
         canvas.clear();
         canvas.present();
 
-        Sdl2Canvas {
+        Sdl2Screen {
             canvas,
             event_pump,
             fg_color,
@@ -53,7 +53,7 @@ impl Sdl2Canvas {
     }
 }
 
-impl Drawable for Sdl2Canvas {
+impl Drawable for Sdl2Screen {
     fn clear(&mut self) {
         self.pixels.clear();
         self.canvas.set_draw_color(self.bg_color.clone());

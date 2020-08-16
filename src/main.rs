@@ -15,7 +15,7 @@ pub use memory::Memory;
 pub use operations::Ops;
 
 use cpu::{CpuState, CPU};
-use graphics::{Color, Sdl2Canvas as Canvas, UserAction};
+use graphics::{Color, Sdl2Screen, UserAction};
 use std::env;
 use std::{path::Path, thread, time::Duration};
 
@@ -36,17 +36,17 @@ fn main() {
 
     let fg_color = Color(0, 255, 0);
     let bg_color = Color(0, 0, 0);
-    let mut canvas = Canvas::init(fg_color, bg_color);
+    let mut screen = Sdl2Screen::init(fg_color, bg_color);
 
     'running: loop {
-        match canvas.poll_events() {
+        match screen.poll_events() {
             Some(UserAction::Quit) => break 'running,
             None => {}
         };
 
-        match cpu.tick(&mut memory, &mut canvas) {
+        match cpu.tick(&mut memory, &mut screen) {
             Ok(CpuState::End) => break 'running,
-            Err(e) => eprintln!("Something went wrong: {:?}", e),
+            Err(e) => panic!("Something went wrong: {:?}", e),
             _ => {}
         };
 
