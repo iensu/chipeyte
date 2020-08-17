@@ -34,6 +34,7 @@ impl CPU {
         &mut self,
         memory: &mut Memory,
         canvas: &mut dyn crate::Drawable,
+        controller: &dyn crate::Controllable,
     ) -> Result<CpuState, ChipeyteError> {
         let instruction = self.fetch(memory);
 
@@ -51,7 +52,7 @@ impl CPU {
         );
 
         self.registers.pc += INSTRUCTION_LENGTH;
-        self.execute(operation, memory, canvas)?;
+        self.execute(operation, memory, canvas, controller)?;
 
         Ok(CpuState::Continue)
     }
@@ -65,8 +66,9 @@ impl CPU {
         operation: Ops,
         memory: &mut Memory,
         canvas: &mut dyn crate::Drawable,
+        controller: &dyn crate::Controllable,
     ) -> Result<(), ChipeyteError> {
-        operation.call(&mut self.registers, memory, canvas)
+        operation.call(&mut self.registers, memory, canvas, controller)
     }
 }
 
@@ -112,7 +114,7 @@ V | {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02x?} {:02
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{graphics::UserAction, Drawable};
+    use crate::{controller::Controllable, graphics::UserAction, Drawable};
     use std::collections::{HashMap, HashSet};
 
     struct MockScreen {
@@ -149,10 +151,30 @@ mod tests {
         fn render(&mut self) {}
     }
 
+    struct MockController {}
+
+    impl MockController {
+        pub fn new() -> Self {
+            MockController {}
+        }
+    }
+
+    impl Controllable for MockController {
+        fn press_key(&mut self, _key: u8) {}
+        fn release_key(&mut self, _key: u8) {}
+        fn is_pressed(&self, _key: u8) -> bool {
+            true
+        }
+        fn get_pressed_key(&self) -> Option<u8> {
+            None
+        }
+    }
+
     #[test]
     fn cpu_increments_pc_during_tick() {
         let mut memory = Memory::new();
         let mut screen = MockScreen::init();
+        let controller = MockController::new();
         let mut cpu = CPU::new(0, PROGRAM_START);
 
         let mut program = HashMap::<usize, u16>::new();
@@ -164,15 +186,15 @@ mod tests {
 
         assert_eq!(cpu.registers.pc, PROGRAM_START);
 
-        cpu.tick(&mut memory, &mut screen).unwrap();
+        cpu.tick(&mut memory, &mut screen, &controller).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH);
 
-        cpu.tick(&mut memory, &mut screen).unwrap();
+        cpu.tick(&mut memory, &mut screen, &controller).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 2);
 
-        cpu.tick(&mut memory, &mut screen).unwrap();
+        cpu.tick(&mut memory, &mut screen, &controller).unwrap();
 
         assert_eq!(cpu.registers.pc, PROGRAM_START + INSTRUCTION_LENGTH * 3);
     }

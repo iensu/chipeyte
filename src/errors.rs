@@ -8,6 +8,7 @@ pub enum ChipeyteError {
     BadDataRegister(u8),
     OpFailed(Ops, String),
     UnsupportedSprite(u8),
+    UnknownKey(u8),
 }
 
 impl fmt::Display for ChipeyteError {
@@ -26,6 +27,8 @@ impl fmt::Display for ChipeyteError {
             }
 
             ChipeyteError::UnsupportedSprite(digit) => write!(f, "Unsupported sprite {:x?}", digit),
+
+            ChipeyteError::UnknownKey(key) => write!(f, "Unknown key: {:x?}", key),
         }
     }
 }

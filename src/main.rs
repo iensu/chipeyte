@@ -1,5 +1,6 @@
 //! An emulation of the Chip-8 programming langauge
 
+mod controller;
 mod cpu;
 mod errors;
 mod graphics;
@@ -14,6 +15,7 @@ pub use graphics::Drawable;
 pub use memory::Memory;
 pub use operations::Ops;
 
+use controller::{Controllable, Controller};
 use cpu::{CpuState, CPU};
 use graphics::{Color, Sdl2Screen, UserAction};
 use std::env;
@@ -31,6 +33,7 @@ fn main() {
 
     let mut cpu = CPU::new(1024, 0x0200);
     let mut memory = Memory::new();
+    let mut controller = Controller::new();
 
     memory.load_program(cpu::PROGRAM_START.into(), &program);
 
@@ -41,10 +44,12 @@ fn main() {
     'running: loop {
         match screen.poll_events() {
             Some(UserAction::Quit) => break 'running,
-            None => {}
+            Some(UserAction::KeyDown(Some(key))) => controller.press_key(key),
+            Some(UserAction::KeyUp(Some(key))) => controller.release_key(key),
+            _ => {}
         };
 
-        match cpu.tick(&mut memory, &mut screen) {
+        match cpu.tick(&mut memory, &mut screen, &controller) {
             Ok(CpuState::End) => break 'running,
             Err(e) => panic!("Something went wrong: {:?}", e),
             _ => {}
@@ -56,3 +61,6 @@ fn main() {
     log::debug!("{}", memory);
     log::debug!("\n{}", cpu);
 }
+
+// 48:0 57:9
+//

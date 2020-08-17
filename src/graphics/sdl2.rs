@@ -102,6 +102,13 @@ impl Drawable for Sdl2Screen {
                 } => {
                     return Some(UserAction::Quit);
                 }
+                Event::KeyDown {
+                    keycode: Some(key), ..
+                } => return Some(UserAction::KeyDown(translate_key(&key))),
+                Event::KeyUp {
+                    keycode: Some(key), ..
+                } => return Some(UserAction::KeyUp(translate_key(&key))),
+
                 _ => {
                     return None;
                 }
@@ -111,5 +118,27 @@ impl Drawable for Sdl2Screen {
 
     fn get_pixels(&self) -> HashSet<(u8, u8)> {
         self.pixels.clone()
+    }
+}
+
+fn translate_key(key: &Keycode) -> Option<u8> {
+    match key {
+        Keycode::Num0 => Some(0),
+        Keycode::Num1 => Some(1),
+        Keycode::Num2 => Some(2),
+        Keycode::Num3 => Some(3),
+        Keycode::Num4 => Some(4),
+        Keycode::Num5 => Some(5),
+        Keycode::Num6 => Some(6),
+        Keycode::Num7 => Some(7),
+        Keycode::Num8 => Some(8),
+        Keycode::Num9 => Some(9),
+        Keycode::A => Some(10),
+        Keycode::B => Some(11),
+        Keycode::C => Some(12),
+        Keycode::D => Some(13),
+        Keycode::E => Some(14),
+        Keycode::F => Some(15),
+        _ => None,
     }
 }

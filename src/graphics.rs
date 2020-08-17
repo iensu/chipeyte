@@ -7,6 +7,8 @@ pub use crate::graphics::sdl2::Sdl2Screen;
 #[derive(Debug)]
 pub enum UserAction {
     Quit,
+    KeyDown(Option<u8>),
+    KeyUp(Option<u8>),
 }
 
 pub trait Drawable {
