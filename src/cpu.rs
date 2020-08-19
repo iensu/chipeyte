@@ -10,16 +10,15 @@ use std::fmt::Display;
 pub const PROGRAM_START: u16 = 0x0200;
 pub const INSTRUCTION_LENGTH: u16 = 2;
 
-// TODO: This really should be done differently
-pub enum CpuState {
-    Continue,
-    End,
-}
-
 #[derive(Debug, PartialEq)]
 pub struct CPU {
     pub(crate) counter: u32,
     pub registers: Registers,
+}
+
+pub enum ProgramState {
+    Running,
+    End,
 }
 
 impl CPU {
@@ -35,11 +34,11 @@ impl CPU {
         memory: &mut Memory,
         canvas: &mut dyn crate::Drawable,
         controller: &dyn crate::Controllable,
-    ) -> Result<CpuState, ChipeyteError> {
+    ) -> Result<ProgramState, ChipeyteError> {
         let instruction = self.fetch(memory);
 
         if instruction == 0 {
-            return Ok(CpuState::End);
+            return Ok(ProgramState::End);
         }
 
         let operation = decode(instruction);
@@ -54,7 +53,7 @@ impl CPU {
         self.registers.pc += INSTRUCTION_LENGTH;
         self.execute(operation, memory, canvas, controller)?;
 
-        Ok(CpuState::Continue)
+        Ok(ProgramState::Running)
     }
 
     fn fetch(&self, memory: &Memory) -> u16 {

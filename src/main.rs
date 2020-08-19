@@ -16,8 +16,8 @@ pub use memory::Memory;
 pub use operations::Ops;
 
 use controller::{Controllable, Controller};
-use cpu::{CpuState, CPU};
 use graphics::{Color, Sdl2Screen, UserAction};
+use cpu::{ProgramState, CPU};
 use std::env;
 use std::{path::Path, thread, time::Duration};
 
@@ -50,8 +50,13 @@ fn main() {
         };
 
         match cpu.tick(&mut memory, &mut screen, &controller) {
-            Ok(CpuState::End) => break 'running,
-            Err(e) => panic!("Something went wrong: {:?}", e),
+            Ok(ProgramState::End) => {
+                log::info!("Reached program end");
+                break 'running;
+            }
+            Err(e) => {
+                panic!("Something went wrong: {:?}", e);
+            }
             _ => {}
         };
 
@@ -65,6 +70,3 @@ fn main() {
     log::debug!("{}", memory);
     log::debug!("\n{}", cpu);
 }
-
-// 48:0 57:9
-//
