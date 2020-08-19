@@ -539,8 +539,8 @@ impl Callable for Ops {
                     for x_offset in 0..8 {
                         let is_one = (byte & mask) > 0;
                         if is_one {
-                            let x = (base_x + x_offset) % 64;
-                            let y = (base_y + (y_offset as u8)) % 32;
+                            let x = ((base_x as u32 + x_offset as u32) % 64) as u8;
+                            let y = ((base_y as u32 + (y_offset as u32)) % 32) as u8;
 
                             if screen.has_pixel(x, y) {
                                 screen.remove_pixel(x, y);
