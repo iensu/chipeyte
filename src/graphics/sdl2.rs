@@ -1,6 +1,13 @@
-use super::{Color, Drawable, UserAction};
+use super::{Audible, Color, Drawable, UserAction};
 use sdl2::{
-    self, event::Event, keyboard::Keycode, rect::Rect, render::Canvas, video::Window, EventPump,
+    self,
+    audio::{AudioCallback, AudioDevice, AudioSpecDesired},
+    event::Event,
+    keyboard::Keycode,
+    rect::Rect,
+    render::Canvas,
+    video::Window,
+    EventPump,
 };
 use std::collections::HashSet;
 
@@ -17,6 +24,28 @@ pub struct Sdl2Screen {
     fg_color: Color,
     pixels: HashSet<(u8, u8)>,
     pixel_size: u32,
+    audio_device: AudioDevice<SquareWave>,
+}
+
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
+    volume: f32,
+}
+
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [Self::Channel]) {
+        for x in out.iter_mut() {
+            *x = if self.phase <= 0.5 {
+                self.volume
+            } else {
+                -self.volume
+            };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
+        }
+    }
 }
 
 impl Sdl2Screen {
@@ -42,13 +71,47 @@ impl Sdl2Screen {
         canvas.clear();
         canvas.present();
 
+        let audio_subsystem = sdl_context.audio().unwrap();
+
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44_100),
+            channels: Some(1),
+            samples: None,
+        };
+
+        let audio_device = audio_subsystem
+            .open_playback(None, &desired_spec, |spec| SquareWave {
+                phase_inc: 440.0 / spec.freq as f32,
+                phase: 0.0,
+                volume: 0.25,
+            })
+            .unwrap();
+
         Sdl2Screen {
             canvas,
             event_pump,
             fg_color,
             bg_color,
             pixel_size,
+            audio_device,
             pixels: HashSet::new(),
+        }
+    }
+}
+
+impl Audible for Sdl2Screen {
+    fn play_sound(&mut self) {
+        self.audio_device.resume();
+    }
+
+    fn stop_sound(&mut self) {
+        self.audio_device.pause();
+    }
+
+    fn is_playing(&self) -> bool {
+        match self.audio_device.status() {
+            sdl2::audio::AudioStatus::Playing => true,
+            _ => false,
         }
     }
 }

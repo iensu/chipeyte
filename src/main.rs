@@ -16,8 +16,8 @@ pub use memory::Memory;
 pub use operations::Ops;
 
 use controller::{Controllable, Controller};
-use graphics::{Color, Sdl2Screen, UserAction};
 use cpu::{ProgramState, CPU};
+use graphics::{Audible, Color, Sdl2Screen, UserAction};
 use std::env;
 use std::{
     path::Path,
@@ -68,8 +68,18 @@ fn main() {
             _ => {}
         };
 
+        if cpu.registers.dt > 0 {
+            cpu.registers.dt -= 1;
+        }
+
         if cpu.registers.st > 0 {
             cpu.registers.st -= 1;
+
+            if !screen.is_playing() {
+                screen.play_sound();
+            }
+        } else if screen.is_playing() {
+            screen.stop_sound();
         }
 
         match start_time.elapsed() {

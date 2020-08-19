@@ -27,5 +27,13 @@ pub trait Drawable {
     fn get_pixels(&self) -> HashSet<(u8, u8)>;
 }
 
+pub trait Audible {
+    fn play_sound(&mut self);
+
+    fn stop_sound(&mut self);
+
+    fn is_playing(&self) -> bool;
+}
+
 #[derive(Clone)]
 pub struct Color(pub u8, pub u8, pub u8);
