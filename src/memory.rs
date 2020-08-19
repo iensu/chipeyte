@@ -1,5 +1,5 @@
 use crate::ChipeyteError;
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 /// # Chip-8 Memory Map
 ///
@@ -136,9 +136,9 @@ impl Memory {
         self.memory[0x01F4] = 0b10000000;
     }
 
-    pub fn load_program(&mut self, program_start_address: usize, program: &HashMap<usize, u16>) {
-        for (address, operation) in program.iter() {
-            self.set_u16(program_start_address + address, *operation);
+    pub fn load_program(&mut self, program_start_address: usize, program: &Vec<u8>) {
+        for (offset, byte) in program.iter().enumerate() {
+            self.set(program_start_address + offset, *byte);
         }
     }
 
