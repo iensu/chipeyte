@@ -499,14 +499,6 @@ impl Callable for Ops {
                             result, PROGRAM_START
                         ),
                     ));
-                } else if result % INSTRUCTION_LENGTH != 0 {
-                    return Err(ChipeyteError::OpFailed(
-                        *self,
-                        format!(
-                            "Memory address '{:04x?}' is an invalid instruction address.",
-                            result
-                        ),
-                    ));
                 }
 
                 registers.pc = result;
