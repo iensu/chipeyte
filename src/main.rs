@@ -19,7 +19,11 @@ use controller::{Controllable, Controller};
 use graphics::{Color, Sdl2Screen, UserAction};
 use cpu::{ProgramState, CPU};
 use std::env;
-use std::{path::Path, thread, time::Duration};
+use std::{
+    path::Path,
+    thread,
+    time::{Duration, SystemTime},
+};
 
 fn main() {
     env_logger::init();
@@ -41,7 +45,11 @@ fn main() {
     let bg_color = Color(0, 0, 0);
     let mut screen = Sdl2Screen::init(fg_color, bg_color);
 
+    let target_framerate = Duration::new(0, 1_000_000);
+
     'running: loop {
+        let start_time = SystemTime::now();
+
         match screen.poll_events() {
             Some(UserAction::Quit) => break 'running,
             Some(UserAction::KeyDown(Some(key))) => controller.press_key(key),
@@ -64,7 +72,17 @@ fn main() {
             cpu.registers.st -= 1;
         }
 
-        thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        match start_time.elapsed() {
+            Ok(elapsed) => {
+                if elapsed < target_framerate {
+                    thread::sleep(target_framerate - elapsed);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error: {:?}", e);
+                break 'running;
+            }
+        }
     }
 
     log::debug!("{}", memory);
