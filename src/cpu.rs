@@ -33,7 +33,7 @@ impl CPU {
         &mut self,
         memory: &mut Memory,
         canvas: &mut dyn crate::Drawable,
-        controller: &dyn crate::Controllable,
+        controller: &mut dyn crate::Controllable,
     ) -> Result<ProgramState, ChipeyteError> {
         let instruction = self.fetch(memory);
 
@@ -65,7 +65,7 @@ impl CPU {
         operation: Ops,
         memory: &mut Memory,
         canvas: &mut dyn crate::Drawable,
-        controller: &dyn crate::Controllable,
+        controller: &mut dyn crate::Controllable,
     ) -> Result<(), ChipeyteError> {
         operation.call(&mut self.registers, memory, canvas, controller)
     }

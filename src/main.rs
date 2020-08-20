@@ -59,7 +59,7 @@ fn main() {
             _ => {}
         };
 
-        match cpu.tick(&mut memory, &mut screen, &controller) {
+        match cpu.tick(&mut memory, &mut screen, &mut controller) {
             Ok(ProgramState::End) => {
                 log::info!("Reached program end");
                 break 'running;

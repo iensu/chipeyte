@@ -7,7 +7,7 @@ pub trait Controllable {
 
     fn is_pressed(&self, key: u8) -> bool;
 
-    fn get_pressed_key(&self) -> Option<u8>;
+    fn get_pressed_key(&mut self) -> Option<u8>;
 }
 
 pub struct Controller {
@@ -26,18 +26,23 @@ impl Controllable for Controller {
     fn press_key(&mut self, key: u8) {
         self.pressed_keys.insert(key);
     }
+
     fn release_key(&mut self, key: u8) {
         self.pressed_keys.remove(&key);
     }
+
     fn is_pressed(&self, key: u8) -> bool {
         self.pressed_keys.contains(&key)
     }
-    fn get_pressed_key(&self) -> Option<u8> {
+
+    fn get_pressed_key(&mut self) -> Option<u8> {
         if self.pressed_keys.is_empty() {
             None
         } else {
-            let key = self.pressed_keys.iter().next().unwrap().clone();
-            Some(key)
+            let keys = self.pressed_keys.iter().cloned().collect::<Vec<u8>>();
+            let key = keys.first().unwrap();
+            self.pressed_keys.remove(key);
+            Some(*key)
         }
     }
 }
