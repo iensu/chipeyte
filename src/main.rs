@@ -46,6 +46,8 @@ fn main() {
     let mut screen = Sdl2Screen::init(fg_color, bg_color);
 
     let target_framerate = Duration::new(0, 1_000_000);
+    let timer_duration = Duration::new(0, 16_700_000);
+    let mut timer_clock = SystemTime::now();
 
     'running: loop {
         let start_time = SystemTime::now();
@@ -68,18 +70,23 @@ fn main() {
             _ => {}
         };
 
-        if cpu.registers.dt > 0 {
-            cpu.registers.dt -= 1;
+        if cpu.registers.st > 0 && !screen.is_playing() {
+            screen.play_sound();
+        } else if cpu.registers.st < 1 && screen.is_playing() {
+            screen.stop_sound();
         }
 
-        if cpu.registers.st > 0 {
-            cpu.registers.st -= 1;
+        if let Ok(elapsed) = timer_clock.elapsed() {
+            if elapsed > timer_duration {
+                if cpu.registers.dt > 0 {
+                    cpu.registers.dt -= 1;
+                }
+                if cpu.registers.st > 0 {
+                    cpu.registers.st -= 1;
+                }
 
-            if !screen.is_playing() {
-                screen.play_sound();
+                timer_clock = SystemTime::now();
             }
-        } else if screen.is_playing() {
-            screen.stop_sound();
         }
 
         match start_time.elapsed() {
