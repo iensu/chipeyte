@@ -45,7 +45,7 @@ fn main() {
     let bg_color = Color(0, 0, 0);
     let mut screen = Sdl2Screen::init(fg_color, bg_color);
 
-    let target_framerate = Duration::new(0, 1_000_000);
+    let target_framerate = Duration::new(0, 1_500_000);
     let timer_duration = Duration::new(0, 16_700_000);
     let mut timer_clock = SystemTime::now();
 
