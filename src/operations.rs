@@ -1422,57 +1422,6 @@ mod tests {
     }
 
     #[test]
-    fn op_drw_draws_8_by_n_sprite_at_pos_vx_vy() {
-        let ops: Vec<Ops> = vec![];
-        let mut memory = Memory::new();
-        let mut screen = MockScreen::init();
-        let mut controller = MockController::new();
-        let mut registers = Registers::new(PROGRAM_START);
-
-        ops.iter().for_each(|op| {
-            (*op)
-                .call(&mut registers, &mut memory, &mut screen, &mut controller)
-                .unwrap();
-        });
-
-        todo!();
-    }
-
-    #[test]
-    fn op_drw_wraps_around_screen_edges() {
-        let ops: Vec<Ops> = vec![];
-        let mut memory = Memory::new();
-        let mut screen = MockScreen::init();
-        let mut controller = MockController::new();
-        let mut registers = Registers::new(PROGRAM_START);
-
-        ops.iter().for_each(|op| {
-            (*op)
-                .call(&mut registers, &mut memory, &mut screen, &mut controller)
-                .unwrap();
-        });
-
-        todo!();
-    }
-
-    #[test]
-    fn op_drw_wraps_xor_drawn_pixels() {
-        let ops: Vec<Ops> = vec![Ops::RND(0x0c, 0xff)];
-        let mut memory = Memory::new();
-        let mut screen = MockScreen::init();
-        let mut controller = MockController::new();
-        let mut registers = Registers::new(PROGRAM_START);
-
-        ops.iter().for_each(|op| {
-            (*op)
-                .call(&mut registers, &mut memory, &mut screen, &mut controller)
-                .unwrap();
-        });
-
-        todo!();
-    }
-
-    #[test]
     fn op_ldvdt_sets_the_vx_equal_to_dt() {
         let ops = vec![Ops::LDVDT(0x0d)];
         let mut memory = Memory::new();
