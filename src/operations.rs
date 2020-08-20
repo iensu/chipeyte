@@ -664,7 +664,10 @@ fn random_number(max_val: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{controller::Controllable, Drawable};
+    use crate::{
+        interface::{Controllable, UserAction},
+        Drawable,
+    };
     use std::collections::HashSet;
 
     struct MockScreen {
@@ -696,7 +699,7 @@ mod tests {
             self.pixels.contains(&(x, y))
         }
         fn render(&mut self) {}
-        fn poll_events(&mut self) -> Option<crate::graphics::UserAction> {
+        fn poll_events(&mut self) -> Option<UserAction> {
             None
         }
     }

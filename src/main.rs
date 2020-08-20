@@ -1,9 +1,8 @@
 //! An emulation of the Chip-8 programming langauge
 
-mod controller;
 mod cpu;
 mod errors;
-mod graphics;
+mod interface;
 mod memory;
 mod operations;
 mod program_reader;
@@ -11,13 +10,12 @@ mod types;
 
 pub use cpu::registers::Registers;
 pub use errors::ChipeyteError;
-pub use graphics::Drawable;
+pub use interface::Drawable;
 pub use memory::Memory;
 pub use operations::Ops;
 
-use controller::{Controllable, Controller};
 use cpu::{ProgramState, CPU};
-use graphics::{Audible, Color, Sdl2Screen, UserAction};
+use interface::{sdl2::Sdl2Screen, Audible, Color, Controllable, Controller, UserAction};
 use std::env;
 use std::{
     path::Path,
