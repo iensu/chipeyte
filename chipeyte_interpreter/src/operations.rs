@@ -11,16 +11,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const STACK_ENTRY_LENGTH: u8 = 2;
 
-pub trait Callable {
-    fn call(
-        &self,
-        register: &mut Registers,
-        memory: &mut Memory,
-        screen: &mut dyn Drawable,
-        controller: &mut dyn Controllable,
-    ) -> Result<(), ChipeyteError>;
-}
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Ops {
     UNKNOWN(u16),
@@ -288,8 +278,8 @@ pub enum Ops {
     LDVI(V),
 }
 
-impl Callable for Ops {
-    fn call(
+impl Ops {
+    pub fn call(
         &self,
         registers: &mut Registers,
         memory: &mut Memory,

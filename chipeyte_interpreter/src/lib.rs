@@ -28,8 +28,6 @@ pub struct ChipeyteInterpreter {
 
 impl ChipeyteInterpreter {
     pub fn new(config: Config) -> Self {
-        env_logger::init();
-
         Self {
             cpu: CPU::new(PROGRAM_START),
             memory: Memory::new(),
