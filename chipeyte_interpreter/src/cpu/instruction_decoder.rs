@@ -1,5 +1,5 @@
+use crate::operations::Ops;
 use crate::types::*;
-use crate::Ops;
 
 pub fn decode(instruction: u16) -> Ops {
     match to_nibbles(instruction) {

@@ -1,4 +1,4 @@
-use crate::ChipeyteError;
+use crate::errors::ChipeyteError;
 
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Registers {

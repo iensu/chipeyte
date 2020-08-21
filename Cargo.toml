@@ -4,15 +4,11 @@ version = "0.1.0"
 authors = ["Jens Östlund <jostlund@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 log = "0.4.11"
 env_logger = "0.7.1"
-
-[dependencies.sdl2]
-version = "0.34.2"
-features = ["gfx"]
+chipeyte_interpreter = { path = "./chipeyte_interpreter" }
+chipeyte_sdl2 = { path = "./chipeyte_sdl2" }
 
 [workspace]
-members = ["chipeyte_interpreter"]
+members = ["chipeyte_interpreter", "chipeyte_sdl2"]

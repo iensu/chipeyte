@@ -1,7 +1,11 @@
 use crate::{
+    cpu::registers::Registers,
     cpu::{INSTRUCTION_LENGTH, PROGRAM_START},
+    errors::ChipeyteError,
+    interface::Controllable,
+    interface::Drawable,
+    memory::Memory,
     types::*,
-    ChipeyteError, Memory, Registers,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,8 +16,8 @@ pub trait Callable {
         &self,
         register: &mut Registers,
         memory: &mut Memory,
-        screen: &mut dyn crate::Drawable,
-        controller: &mut dyn crate::Controllable,
+        screen: &mut dyn Drawable,
+        controller: &mut dyn Controllable,
     ) -> Result<(), ChipeyteError>;
 }
 
@@ -289,8 +293,8 @@ impl Callable for Ops {
         &self,
         registers: &mut Registers,
         memory: &mut Memory,
-        screen: &mut dyn crate::Drawable,
-        controller: &mut dyn crate::Controllable,
+        screen: &mut dyn Drawable,
+        controller: &mut dyn Controllable,
     ) -> Result<(), ChipeyteError> {
         match &*self {
             Ops::UNKNOWN(op) => Err(ChipeyteError::OpFailed(

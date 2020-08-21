@@ -1,4 +1,4 @@
-use crate::ChipeyteError;
+use crate::errors::ChipeyteError;
 use std::fmt::Display;
 
 /// # Chip-8 Memory Map
