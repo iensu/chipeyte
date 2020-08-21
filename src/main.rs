@@ -28,4 +28,6 @@ fn main() {
         &mut interface.controller,
         &program,
     );
+
+    log::debug!("{}", interpreter);
 }

@@ -103,9 +103,12 @@ impl ChipeyteInterpreter {
                 }
             }
         }
+    }
+}
 
-        log::debug!("{}", self.memory);
-        log::debug!("\n{}", self.cpu);
+impl Display for ChipeyteInterpreter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\n{}", self.memory, self.cpu)
     }
 }
 
