@@ -1,0 +1,12 @@
+[package]
+name = "chipeyte_sdl2"
+version = "0.1.0"
+authors = ["Jens Östlund <jostlund@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+chipeyte_interpreter = { path = "../chipeyte_interpreter" }
+
+[dependencies.sdl2]
+version = "0.34.2"
+features = ["gfx"]

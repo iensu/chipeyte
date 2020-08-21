@@ -2,9 +2,10 @@ pub mod instruction_decoder;
 pub mod registers;
 
 use crate::cpu::instruction_decoder::decode;
+use crate::cpu::registers::Registers;
+use crate::interface;
 use crate::memory::Memory;
-use crate::Registers;
-use crate::{operations::Callable, ChipeyteError, Ops};
+use crate::{errors::ChipeyteError, operations::Callable, operations::Ops};
 use std::fmt::Display;
 
 pub const PROGRAM_START: u16 = 0x0200;
@@ -22,9 +23,9 @@ pub enum ProgramState {
 }
 
 impl CPU {
-    pub fn new(interrupt_period: u32, initial_pc: u16) -> CPU {
+    pub fn new(initial_pc: u16) -> CPU {
         CPU {
-            counter: interrupt_period,
+            counter: 0,
             registers: Registers::new(initial_pc),
         }
     }
@@ -32,8 +33,8 @@ impl CPU {
     pub fn tick(
         &mut self,
         memory: &mut Memory,
-        canvas: &mut dyn crate::Drawable,
-        controller: &mut dyn crate::Controllable,
+        screen: &mut dyn interface::Drawable,
+        controller: &mut dyn interface::Controllable,
     ) -> Result<ProgramState, ChipeyteError> {
         let instruction = self.fetch(memory);
 
@@ -51,7 +52,7 @@ impl CPU {
         );
 
         self.registers.pc += INSTRUCTION_LENGTH;
-        self.execute(operation, memory, canvas, controller)?;
+        self.execute(operation, memory, screen, controller)?;
 
         Ok(ProgramState::Running)
     }
@@ -64,10 +65,10 @@ impl CPU {
         &mut self,
         operation: Ops,
         memory: &mut Memory,
-        canvas: &mut dyn crate::Drawable,
-        controller: &mut dyn crate::Controllable,
+        screen: &mut dyn interface::Drawable,
+        controller: &mut dyn interface::Controllable,
     ) -> Result<(), ChipeyteError> {
-        operation.call(&mut self.registers, memory, canvas, controller)
+        operation.call(&mut self.registers, memory, screen, controller)
     }
 }
 

@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-pub mod sdl2;
-
 #[derive(Debug)]
 pub enum UserAction {
     Quit,
@@ -33,12 +31,14 @@ pub trait Drawable {
 // AUDIO
 
 pub trait Audible {
-    fn play_sound(&mut self);
+    fn play_sound(&self);
 
-    fn stop_sound(&mut self);
+    fn stop_sound(&self);
 
     fn is_playing(&self) -> bool;
 }
+
+pub trait AudibleAndDrawable: Audible + Drawable {}
 
 // CONTROLLER
 

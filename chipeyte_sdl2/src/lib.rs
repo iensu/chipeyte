@@ -1,19 +1,35 @@
-use super::{Audible, Color, Drawable, UserAction};
+use chipeyte_interpreter::interface::{Audible, Color, Controller, Drawable, UserAction};
 use sdl2::{
     self,
     audio::{AudioCallback, AudioDevice, AudioSpecDesired},
     event::Event,
     keyboard::Keycode,
+    pixels::Color as Sdl2Color,
     rect::Rect,
     render::Canvas,
     video::Window,
-    EventPump,
+    EventPump, Sdl,
 };
 use std::collections::HashSet;
 
-impl Into<sdl2::pixels::Color> for Color {
-    fn into(self) -> sdl2::pixels::Color {
-        sdl2::pixels::Color::RGB(self.0, self.1, self.2)
+pub struct Sdl2Interface {
+    pub screen: Sdl2Screen,
+    pub speaker: Sdl2Speaker,
+    pub controller: Controller,
+}
+
+impl Sdl2Interface {
+    pub fn init(fg_color: Color, bg_color: Color) -> Self {
+        let sdl_context = sdl2::init().unwrap();
+        let screen = Sdl2Screen::init(&sdl_context, fg_color, bg_color);
+        let speaker = Sdl2Speaker::init(&sdl_context);
+        let controller = Controller::new();
+
+        Self {
+            screen,
+            speaker,
+            controller,
+        }
     }
 }
 
@@ -24,33 +40,10 @@ pub struct Sdl2Screen {
     fg_color: Color,
     pixels: HashSet<(u8, u8)>,
     pixel_size: u32,
-    audio_device: AudioDevice<SquareWave>,
-}
-
-struct SquareWave {
-    phase_inc: f32,
-    phase: f32,
-    volume: f32,
-}
-
-impl AudioCallback for SquareWave {
-    type Channel = f32;
-
-    fn callback(&mut self, out: &mut [Self::Channel]) {
-        for x in out.iter_mut() {
-            *x = if self.phase <= 0.5 {
-                self.volume
-            } else {
-                -self.volume
-            };
-            self.phase = (self.phase + self.phase_inc) % 1.0;
-        }
-    }
 }
 
 impl Sdl2Screen {
-    pub fn init(fg_color: Color, bg_color: Color) -> Sdl2Screen {
-        let sdl_context = sdl2::init().unwrap();
+    pub fn init(sdl_context: &Sdl, fg_color: Color, bg_color: Color) -> Sdl2Screen {
         let video_subsystem = sdl_context.video().unwrap();
 
         // 64 x 32 pixel grid
@@ -66,26 +59,12 @@ impl Sdl2Screen {
 
         let mut canvas = window.into_canvas().build().unwrap();
         let event_pump = sdl_context.event_pump().unwrap();
+        let Color(r, g, b) = bg_color;
+        let background_color = Sdl2Color::RGB(r, g, b);
 
-        canvas.set_draw_color(bg_color.clone());
+        canvas.set_draw_color(background_color);
         canvas.clear();
         canvas.present();
-
-        let audio_subsystem = sdl_context.audio().unwrap();
-
-        let desired_spec = AudioSpecDesired {
-            freq: Some(44_100),
-            channels: Some(1),
-            samples: None,
-        };
-
-        let audio_device = audio_subsystem
-            .open_playback(None, &desired_spec, |spec| SquareWave {
-                phase_inc: 440.0 / spec.freq as f32,
-                phase: 0.0,
-                volume: 0.25,
-            })
-            .unwrap();
 
         Sdl2Screen {
             canvas,
@@ -93,33 +72,17 @@ impl Sdl2Screen {
             fg_color,
             bg_color,
             pixel_size,
-            audio_device,
             pixels: HashSet::new(),
-        }
-    }
-}
-
-impl Audible for Sdl2Screen {
-    fn play_sound(&mut self) {
-        self.audio_device.resume();
-    }
-
-    fn stop_sound(&mut self) {
-        self.audio_device.pause();
-    }
-
-    fn is_playing(&self) -> bool {
-        match self.audio_device.status() {
-            sdl2::audio::AudioStatus::Playing => true,
-            _ => false,
         }
     }
 }
 
 impl Drawable for Sdl2Screen {
     fn clear(&mut self) {
+        let Color(r, g, b) = self.bg_color;
+
         self.pixels.clear();
-        self.canvas.set_draw_color(self.bg_color.clone());
+        self.canvas.set_draw_color(Sdl2Color::RGB(r, g, b));
         self.canvas.clear();
         self.canvas.present();
     }
@@ -137,10 +100,13 @@ impl Drawable for Sdl2Screen {
     }
 
     fn render(&mut self) {
-        self.canvas.set_draw_color(self.bg_color.clone());
+        let Color(r, g, b) = self.bg_color;
+        self.canvas.set_draw_color(Sdl2Color::RGB(r, g, b));
         self.canvas.clear();
 
-        self.canvas.set_draw_color(self.fg_color.clone());
+        let Color(r, g, b) = self.fg_color;
+        self.canvas.set_draw_color(Sdl2Color::RGB(r, g, b));
+
         for pixel in self.pixels.iter() {
             let pos_x = pixel.0 as i32 * self.pixel_size as i32;
             let pos_y = pixel.1 as i32 * self.pixel_size as i32;
@@ -203,5 +169,69 @@ fn translate_key(key: &Keycode) -> Option<u8> {
         Keycode::Num5 => Some(14),
         Keycode::Num6 => Some(15),
         _ => None,
+    }
+}
+
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
+    volume: f32,
+}
+
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [Self::Channel]) {
+        for x in out.iter_mut() {
+            *x = if self.phase <= 0.5 {
+                self.volume
+            } else {
+                -self.volume
+            };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
+        }
+    }
+}
+
+pub struct Sdl2Speaker {
+    audio_device: AudioDevice<SquareWave>,
+}
+
+impl Sdl2Speaker {
+    pub fn init(sdl_context: &Sdl) -> Self {
+        let audio_subsystem = sdl_context.audio().unwrap();
+
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44_100),
+            channels: Some(1),
+            samples: None,
+        };
+
+        let audio_device = audio_subsystem
+            .open_playback(None, &desired_spec, |spec| SquareWave {
+                phase_inc: 440.0 / spec.freq as f32,
+                phase: 0.0,
+                volume: 0.25,
+            })
+            .unwrap();
+
+        Self { audio_device }
+    }
+}
+
+impl Audible for Sdl2Speaker {
+    fn play_sound(&self) {
+        self.audio_device.resume();
+    }
+
+    fn stop_sound(&self) {
+        self.audio_device.pause();
+    }
+
+    fn is_playing(&self) -> bool {
+        match self.audio_device.status() {
+            sdl2::audio::AudioStatus::Playing => true,
+            _ => false,
+        }
     }
 }
