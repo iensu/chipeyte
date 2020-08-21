@@ -1,7 +1,9 @@
-use cpu::{ProgramState, CPU, PROGRAM_START};
+use cpu::{CPU, PROGRAM_START};
 use interface::{Audible, Controllable, Drawable, UserAction};
 use memory::Memory;
+use operations::Ops;
 use std::{
+    fmt::Display,
     thread,
     time::{Duration, SystemTime},
 };
@@ -59,14 +61,16 @@ impl ChipeyteInterpreter {
             };
 
             match self.cpu.tick(&mut self.memory, screen, controller) {
-                Ok(ProgramState::End) => {
-                    log::info!("Reached program end");
+                Ok((pc, Ops::UNKNOWN(x))) => {
+                    log::info!("Reached unknown operation ${:04x?} at ${:04x?}", x, pc);
                     break 'running;
+                }
+                Ok((pc, op)) => {
+                    log::info!("{:04x?}: {:?}", pc, op);
                 }
                 Err(e) => {
                     panic!("Something went wrong: {:?}", e);
                 }
-                _ => {}
             };
 
             if self.cpu.registers.st > 0 && !speaker.is_playing() {

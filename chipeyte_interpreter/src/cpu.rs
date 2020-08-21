@@ -5,7 +5,7 @@ use crate::cpu::instruction_decoder::decode;
 use crate::cpu::registers::Registers;
 use crate::interface;
 use crate::memory::Memory;
-use crate::{errors::ChipeyteError, operations::Callable, operations::Ops};
+use crate::{errors::ChipeyteError, operations::Ops};
 use std::fmt::Display;
 
 pub const PROGRAM_START: u16 = 0x0200;
@@ -15,11 +15,6 @@ pub const INSTRUCTION_LENGTH: u16 = 2;
 pub struct CPU {
     pub(crate) counter: u32,
     pub registers: Registers,
-}
-
-pub enum ProgramState {
-    Running,
-    End,
 }
 
 impl CPU {
@@ -35,26 +30,19 @@ impl CPU {
         memory: &mut Memory,
         screen: &mut dyn interface::Drawable,
         controller: &mut dyn interface::Controllable,
-    ) -> Result<ProgramState, ChipeyteError> {
+    ) -> Result<(u16, Ops), ChipeyteError> {
         let instruction = self.fetch(memory);
-
-        if instruction == 0 {
-            return Ok(ProgramState::End);
-        }
 
         let operation = decode(instruction);
 
-        log::info!(
-            "{:04x?}: {:x?} - {:?}",
-            self.registers.pc,
-            instruction,
-            operation
-        );
+        if instruction == 0 {
+            return Ok((self.registers.pc, Ops::UNKNOWN(instruction)));
+        }
 
         self.registers.pc += INSTRUCTION_LENGTH;
         self.execute(operation, memory, screen, controller)?;
 
-        Ok(ProgramState::Running)
+        Ok((self.registers.pc, operation))
     }
 
     fn fetch(&self, memory: &Memory) -> u16 {
