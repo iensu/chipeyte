@@ -38,8 +38,6 @@ pub trait Audible {
     fn is_playing(&self) -> bool;
 }
 
-pub trait AudibleAndDrawable: Audible + Drawable {}
-
 // CONTROLLER
 
 pub trait Controllable {
