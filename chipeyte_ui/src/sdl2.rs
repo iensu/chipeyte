@@ -150,24 +150,52 @@ impl Drawable for Sdl2Screen {
     }
 }
 
+/// Translate Sdl2 keycode to Chipeyte key.
+///
+/// Original Chip-8 layout
+///
+///   ,---------------.
+///   | 1 | 2 | 3 | C |
+///   |---|---|---|---|
+///   | 4 | 5 | 6 | D |
+///   |---|---|---|---|
+///   | 7 | 8 | 9 | E |
+///   |---|---|---|---|
+///   | A | 0 | B | F |
+///   `---------------´
+///
+/// Modern keyboard layout:
+///
+///   ,---------------.
+///   | 6 | 7 | 8 | 9 |
+///   |---|---|---|---|
+///   | Y | U | I | O |
+///   |---|---|---|---|
+///   | H | J | K | L |
+///   |---|---|---|---|
+///   | N | M | , | . |
+///   `---------------´
 fn translate_key(key: &Keycode) -> Option<u8> {
     match key {
-        Keycode::X => Some(0),
-        Keycode::Z => Some(1),
-        Keycode::S => Some(2),
-        Keycode::C => Some(3),
-        Keycode::A => Some(4),
-        Keycode::Space => Some(5),
-        Keycode::D => Some(6),
-        Keycode::Q => Some(7),
-        Keycode::W => Some(8),
-        Keycode::E => Some(9),
-        Keycode::Num1 => Some(10),
-        Keycode::Num2 => Some(11),
-        Keycode::Num3 => Some(12),
-        Keycode::Num4 => Some(13),
-        Keycode::Num5 => Some(14),
-        Keycode::Num6 => Some(15),
+        Keycode::Num6 => Some(1),
+        Keycode::Num7 => Some(2),
+        Keycode::Num8 => Some(3),
+        Keycode::Num9 => Some(12),
+
+        Keycode::Y => Some(4),
+        Keycode::U => Some(5),
+        Keycode::I => Some(6),
+        Keycode::O => Some(13),
+
+        Keycode::H => Some(7),
+        Keycode::J => Some(8),
+        Keycode::K => Some(9),
+        Keycode::L => Some(14),
+
+        Keycode::N => Some(10),
+        Keycode::M => Some(0),
+        Keycode::Comma => Some(11),
+        Keycode::Period => Some(15),
         _ => None,
     }
 }

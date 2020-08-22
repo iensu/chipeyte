@@ -34,6 +34,34 @@ $ cargo run --features "sdl2_ui" ./programs/controller.c8
 
 #### Controls
 
+Original Chip-8 keyboard had 16 buttons with the following layout:
+
+``` asciidoc
+,---------------.
+| 1 | 2 | 3 | C |
+|---|---|---|---|
+| 4 | 5 | 6 | D |
+|---|---|---|---|
+| 7 | 8 | 9 | E |
+|---|---|---|---|
+| A | 0 | B | F |
+`---------------´
+```
+
+In Chipeyte, this has been keyboard layout translated into:
+
+``` asciidoc
+,---------------.
+| 6 | 7 | 8 | 9 |
+|---|---|---|---|
+| Y | U | I | O |
+|---|---|---|---|
+| H | J | K | L |
+|---|---|---|---|
+| N | M | , | . |
+`---------------´
+```
+
 Chip-8 programs were controlled using a keyboard with 15 buttons 0-9 and A-F. Chipeyte maps the keys accordingly:
 
 | Keyboard | Chipeyte key |
