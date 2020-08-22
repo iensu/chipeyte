@@ -12,13 +12,13 @@ use sdl2::{
 };
 use std::collections::HashSet;
 
-pub struct Sdl2Interface {
+pub struct Sdl2UI {
     pub screen: Sdl2Screen,
     pub speaker: Sdl2Speaker,
     pub controller: Controller,
 }
 
-impl Sdl2Interface {
+impl Sdl2UI {
     pub fn init(fg_color: Color, bg_color: Color) -> Self {
         let sdl_context = sdl2::init().unwrap();
         let screen = Sdl2Screen::init(&sdl_context, fg_color, bg_color);

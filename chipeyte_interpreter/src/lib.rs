@@ -61,12 +61,14 @@ impl ChipeyteInterpreter {
             };
 
             match self.cpu.tick(&mut self.memory, screen, controller) {
-                Ok((pc, Ops::UNKNOWN(x))) => {
-                    log::info!("Reached unknown operation {:04x?} at {:04x?}", x, pc);
+                Ok((_pc, Ops::UNKNOWN(_x))) => {
+                    #[cfg(feature = "logging")]
+                    log::info!("Reached unknown operation {:04x?} at {:04x?}", _x, _pc);
                     break 'running;
                 }
-                Ok((pc, op)) => {
-                    log::info!("{:04x?}: {:?}", pc, op);
+                Ok((_pc, _op)) => {
+                    #[cfg(feature = "logging")]
+                    log::info!("{:04x?}: {:?}", _pc, _op);
                 }
                 Err(e) => {
                     panic!("Something went wrong: {:?}", e);

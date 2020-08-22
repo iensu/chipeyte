@@ -4,11 +4,21 @@ version = "0.1.0"
 authors = ["Jens Östlund <jostlund@gmail.com>"]
 edition = "2018"
 
+[features]
+
+default = []
+
+logging = ["log", "env_logger", "chipeyte_interpreter/logging"]
+
+sdl2_ui = ["chipeyte_ui/sdl2_ui"]
+
 [dependencies]
-log = "0.4.11"
-env_logger = "0.7.1"
+
 chipeyte_interpreter = { path = "./chipeyte_interpreter" }
-chipeyte_sdl2 = { path = "./chipeyte_sdl2" }
+chipeyte_ui = { path = "./chipeyte_ui" }
+
+env_logger = { version = "0.7.1" , optional = true }
+log = { version = "0.4.11", optional = true }
 
 [workspace]
-members = ["chipeyte_interpreter", "chipeyte_sdl2"]
+members = ["chipeyte_interpreter", "chipeyte_ui"]
