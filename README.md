@@ -2,6 +2,8 @@
 
 A Rust implementation of the Chip-8 emulator.
 
+![Chipeyte running Space Invaders](./docs/images/chipeyte.png)
+
 ## Running the emulator
 
 The most basic program [test_registers.c8](./programs/test_registers.c8) does not require any additional dependencies and can be run by the following command:
