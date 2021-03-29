@@ -13,7 +13,7 @@ pub const INSTRUCTION_LENGTH: u16 = 2;
 
 #[derive(Debug, PartialEq)]
 pub struct CPU {
-    pub(crate) counter: u32,
+    pub counter: u32,
     pub registers: Registers,
 }
 
