@@ -86,3 +86,46 @@ impl Controllable for Controller {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_pressed_returns_true_if_key_is_pressed() {
+        let mut c = Controller::new();
+        c.press_key(1);
+        assert_eq!(c.is_pressed(1), true);
+    }
+
+    #[test]
+    fn is_pressed_returns_false_if_key_is_not_pressed() {
+        let mut c = Controller::new();
+        c.press_key(2);
+        assert_eq!(c.is_pressed(1), false);
+    }
+
+    #[test]
+    fn release_key_releases_the_key() {
+        let mut c = Controller::new();
+        c.press_key(1);
+        assert_eq!(c.is_pressed(1), true);
+        c.release_key(1);
+        assert_eq!(c.is_pressed(1), false);
+    }
+
+    #[test]
+    fn get_pressed_key_returns_none_if_no_keys_are_pressed() {
+        let mut c = Controller::new();
+        assert_eq!(c.get_pressed_key(), None);
+    }
+
+    #[test]
+    fn get_pressed_key_releases_the_key_and_returns_it() {
+        let mut c = Controller::new();
+        c.press_key(1);
+        let key = c.get_pressed_key().unwrap();
+        assert_eq!(key, 1);
+        assert_eq!(c.is_pressed(key), false);
+    }
+}
