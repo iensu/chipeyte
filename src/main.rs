@@ -6,9 +6,9 @@ use chipeyte_interpreter::{interface::Color, ChipeyteInterpreter, Config};
 use std::env;
 use std::path::Path;
 
-#[cfg(not(feature = "sdl2_ui"))]
+#[cfg(not(feature = "sdl2-ui"))]
 use chipeyte_ui::mock::MockUI as UI;
-#[cfg(feature = "sdl2_ui")]
+#[cfg(feature = "sdl2-ui")]
 use chipeyte_ui::sdl2::Sdl2UI as UI;
 
 fn main() {

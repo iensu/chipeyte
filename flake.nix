@@ -46,7 +46,7 @@
               lockFile = ./Cargo.lock;
             };
 
-            buildFeatures = [ "sdl2_ui" "logging" ];
+            buildFeatures = [ "sdl2-ui" "logging" ];
             buildInputs = with pkgs; [ SDL2 SDL2_gfx libiconv ];
 
             cargoSha256 = "sha256-fw/zUbYynrpeLGQ/uhs3LEq7tnECvatNAuDCJuCQGms=";

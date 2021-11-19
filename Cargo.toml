@@ -10,7 +10,7 @@ default = []
 
 logging = ["log", "env_logger", "chipeyte_interpreter/logging"]
 
-sdl2_ui = ["chipeyte_ui/sdl2_ui"]
+sdl2-ui = ["chipeyte_ui/sdl2-ui"]
 
 [dependencies]
 

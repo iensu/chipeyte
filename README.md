@@ -14,7 +14,7 @@ A Rust implementation of the Chip-8 emulator.
 **Instructions**
 
 1. Clone this repository.
-2. Build the executable by running `$ cargo build --release --features "sdl2_ui"` in the project root directory.
+2. Build the executable by running `$ cargo build --release --features "sdl2-ui"` in the project root directory.
 3. Find some game ROMs, I recommend [Zophar Domain's Chip-8 Games Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html)
 4. In the project root directory, run `$ ./target/release/chipeyte path/to/the/game`
 

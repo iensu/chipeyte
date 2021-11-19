@@ -8,7 +8,7 @@ edition = "2018"
 
 default = []
 
-sdl2_ui = ["sdl2"]
+sdl2-ui = ["sdl2"]
 
 [dependencies]
 chipeyte_interpreter = { path = "../chipeyte_interpreter" }
