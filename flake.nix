@@ -1,5 +1,7 @@
 {
-  description = "A Chip-8 emulator";
+  description = ''
+A Chip-8 emulator.
+'';
 
   inputs = {
     # Requires unstable in order to build as of 2021-11-19
@@ -18,7 +20,8 @@
     ]
       (system:
         let
-          name = "chipeyte";
+          cargoConfig = builtins.fromTOML(builtins.readFile(./Cargo.toml));
+          name = cargoConfig.package.name;
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
@@ -38,8 +41,8 @@
           packages.${name} = (pkgs.makeRustPlatform {
             inherit (fenix.packages.${system}.minimal) cargo rustc;
           }).buildRustPackage {
-            pname = "chipeyte";
-            version = "0.1.0";
+            pname = cargoConfig.package.name;
+            version = cargoConfig.package.version;
             src = ./.;
 
             cargoLock = {
