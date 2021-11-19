@@ -18,6 +18,14 @@ A Rust implementation of the Chip-8 emulator.
 3. Find some game ROMs, I recommend [Zophar Domain's Chip-8 Games Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html)
 4. In the project root directory, run `$ ./target/release/chipeyte path/to/the/game`
 
+**Using Nix**
+
+If you use Nix with Flakes support you can run Chipeyte like so without the need to install any of the required software listed above.
+
+``` shell
+$ nix run .# ./programs/drawing01.c8
+```
+
 ### Controls
 
 Original Chip-8 keyboard had 16 buttons with the following layout:
